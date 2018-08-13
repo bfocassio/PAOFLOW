@@ -77,6 +77,22 @@ en_range=0.50
 #first_thresh=1.e-4
 first_thresh=0.01
 
+
+def band_loop_H(ini_ik,end_ik,nspin,nawf,nkpi,HRaux,kq,R):
+
+   nawf,nawf,_,nspin = HRaux.shape
+   kdot = np.zeros((1,R.shape[0]),dtype=complex,order="C")
+   kdot = np.tensordot(R,2.0j*np.pi*kq[:,ini_ik:end_ik],axes=([1],[0]))
+   np.exp(kdot,kdot)
+
+   auxh = np.zeros((nawf,nawf,1,nspin),dtype=complex,order="C")
+   for ispin in range(nspin):
+       auxh[:,:,ini_ik:end_ik,ispin]=np.tensordot(HRaux[:,:,:,ispin],kdot,axes=([2],[0]))
+   kdot  = None
+   return(auxh)
+
+
+
 def gen_eigs(HRaux,kq,Rfft,band,b_vectors):
     # Load balancing
 
@@ -326,6 +342,94 @@ def find_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
 
             startt = time.time()
             #fist pass
+            x0 = np.asarray(guess_K[i]).ravel()
+            n, = x0.shape
+##            print ('bounds_K[i]:{}',format(bounds_K[i]))
+##            print ('length of x0:{}, length of bounds:{}'.format(n,len(bounds_K[i])))
+            current_bounds=[(bounds_K[i,0,0],bounds_K[i,1,0]),(bounds_K[i,0,1],bounds_K[i,1,1]),(bounds_K[i,0,2],bounds_K[i,1,2])]
+##            print ('current_bounds:',format(current_bounds))
+            solx = OP.fmin_l_bfgs_b(lam_XiP,guess_K[i],bounds=current_bounds,approx_grad=True,maxiter=3000)
+#                                    method='trf',jac='2-point',ftol=9.9e-3,
+#                                    max_nfev=300)
+#            print ('solx:{}'.format(solx))
+
+#            print (solx[1])
+##            nfvf = solx.nfev
+            #second pass
+#            if np.all(np.abs(solx[1])<0.01):
+#                print ('starting second pass')
+            if np.abs(solx[1]<0.01):
+                print ('Candidate No.{} found'.format(candidates))
+                print (solx[0])
+                print (solx[1])
+                candidates += 1
+#                solx = OP.least_squares(lam_XiP,solx.x,bounds=bounds_K[i],jac='3-point',max_nfev=30000)
+#ftol=5.e-16,gtol=1.e-14,
+#                                        method='trf',jac='3-point',xtol=1.e-12,
+#                                        max_nfev=300)
+            else:
+                fp+=1
+                continue
+
+
+ #       except Exception,e:
+ #           print(e)                   
+ #           continue
+
+
+    comm.Barrier()
+ #   all_extrema = Gatherv_wrap(extrema)
+
+#        zero_mask   = np.sum(all_extrema,axis=1)!=0.0
+#        all_extrema = all_extrema[zero_mask]
+#        if weyl:
+#            np.savetxt('weyl.dat',all_extrema)
+    if weyl:
+        raise SystemExit
+
+    comm.Barrier()
+
+    tempt = np.asarray([timer_avg],dtype=float)
+    tottt = np.zeros((1),dtype=float)
+    comm.Reduce(tempt,tottt)
+
+    temp = np.asarray([ep,fp,sp],dtype=int)
+    tot = np.zeros((3),dtype=int)
+    comm.Reduce(temp,tot)
+    if rank==0:
+        fprm  = 1.0-float(tot[1])/float(tot[0])
+        sprm = 1.0-float(tot[2])/float(tot[1])
+
+        print("1st Pass: %s"%(np.around(fprm*100,decimals=2)))
+        print("2nd Pass: %s"%(np.around(sprm*100,decimals=2)))
+        print("AVG time: %s"%(tottt/float(tot[0])))
+
+
+    if rank==0:
+        return all_extrema
+    else: return
+
+"""
+
+
+
+
+
+
+
+            lam_XiP  = lambda K: find_egap(HRaux,K,Rfft,band,b_vectors,ef_index,ispin)
+#loop over the search grid 
+##        try:            
+
+#            eig,_ = gen_eigs(HRaux,guess_K[i],Rfft,b,b_vectors)
+
+#            if np.abs(eig[0,b,0]-shift)<0.15 or np.abs(eig[0,b,0])>en_range:
+#                continue
+#            else: 
+#                ep+=1
+
+            startt = time.time()
+            #fist pass
             solx = OP.least_squares(lam_XiP,guess_K[i],bounds=bounds_K[i],jac='2-point',max_nfev=30000)
 #                                    method='trf',jac='2-point',ftol=9.9e-3,
 #                                    max_nfev=300)
@@ -367,9 +471,9 @@ def find_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
 
     comm.Barrier()
     all_extrema = Gatherv_wrap(extrema)
-
     if rank==0:
         zero_mask   = np.sum(all_extrema,axis=1)!=0.0
         all_extrema = all_extrema[zero_mask]
         if weyl:
             np.savetxt('weyl.dat',all_extrema)
+"""

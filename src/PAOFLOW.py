@@ -83,6 +83,8 @@ from do_Boltz_tensors import *
 from do_epsilon import *
 from do_adaptive_smearing import *
 from do_z2pack import *
+from do_find_Weyl import *
+import time
 import resource
 
 def paoflow(inputpath='./',inputfile='inputfile.xml'):
@@ -713,7 +715,8 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
             Hksp=scatter_full(Hksp,npool)
 
         #no longer needed
-        HRs = None
+        if rank != 0: 
+            HRs = None
         Hkaux = None
         Hks   = None
 
@@ -900,10 +903,12 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
         comm.Abort()
         raise Exception
     
-    try:
+#    try:
+    if True:
         pksp = None
         jksp = None
-        if Boltzmann or epsilon or Berry or spin_Hall or critical_points or smearing != None:
+        if False:
+#        if Boltzmann or epsilon or Berry or spin_Hall or critical_points or smearing != None:
             if checkpoint < 3:
 
                 #----------------------
@@ -973,9 +978,85 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
             if rank != 0:
                 tksp = None
 
-            pksp = do_momentum(v_k,dHksp,npool)
+#            pksp = do_momentum(v_k,dHksp,npool)
             if not spin_Hall:
                 dHksp=None
+
+
+            nk1 = comm.bcast(nk1)
+            nk2 = comm.bcast(nk2)
+            nk3 = comm.bcast(nk3)
+
+            kq,kq_wght,_,idk = get_K_grid_fft(nk1,nk2,nk3,b_vectors)
+            # for ispin in xrange(nspin):
+            #     for n in xrange(bnd):            
+            #         for ik in xrange(pksp.shape[0]):
+            #             velkp_aux[ik,:,n,ispin] = pksp[ik,:,n,n,ispin].real
+            #             #get velocity vectors vk1,vk2,vk3
+            #             velkp_aux[ik,:,n,ispin] = velkp_aux[ik,:,n,ispin]
+
+
+
+
+
+
+#            velkp = gather_full(velkp_aux,npool)
+#            if rank!=0:
+#                velkp = np.zeros((nk1*nk2*nk3,3,bnd,nspin),dtype=np.float64,order='C')
+
+            velkp_aux = None
+
+#            comm.Bcast(velkp)
+
+            pksp=None
+            velkp=None
+            eig = E_k = None
+
+
+            if rank!=0:
+                HRs=None
+            if True:
+#            if do_bandwarping_calc.load_crit==False:
+                crit = find_min(nelec,HRs,None,False,alat,velkp,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,npool=npool,shift=shift,nl=nl,sh=sh)
+##                crit = do_find_extrema.find_min(HRs,None,False,alat,velkp,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,npool=npool,shift=shift,nl=nl,sh=sh,nelec=nelec)
+            else:
+                crit=np.array([[0.0,0.0,0.0,0.0,0.0,0.0],
+                               [0.0,0.0,0.0,1.0,0.0,0.0],])
+
+            eig = E_k = None
+
+
+            if rank==0:
+                _,_,nr1,nr2,nr3,_ = HRs.shape
+                HRs=np.ascontiguousarray(HRs)
+            else:
+                nr1=nr2=nr3=None
+                HRs = None
+
+            comm.Barrier()
+
+            nr1 = comm.bcast(nr1)
+            nr2 = comm.bcast(nr2)
+            nr3 = comm.bcast(nr3)
+
+            comm.Barrier()
+
+            if rank!=0:
+                HRs=np.zeros((nawf,nawf,nr1,nr2,nr3,nspin),dtype=complex,order='C')
+
+            comm.Barrier()
+            comm.Bcast(HRs)
+            comm.Barrier()
+
+            R,Rfft,R_wght,nrtot,idx = get_R_grid_fft(nr1,nr2,nr3,a_vectors)
+
+            do_eff_mass(HRs,None,R,idx,alat,a_vectors,b_vectors,bnd,k_points=crit,nspin=1,shift=shift,read_S=False)
+
+
+
+
+
+
 
 
             if rank == 0:
@@ -1029,11 +1110,11 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
         kq_wght = np.ones((nktot),dtype=float)
         kq_wght /= float(nktot)
 
-    except Exception as e:
-        print('Rank %d: Exception in Gradient or Momenta'%rank)
-        traceback.print_exc()
-        comm.Abort()
-        raise Exception
+    #except Exception as e:
+    #    print('Rank %d: Exception in Gradient or Momenta'%rank)
+    #    traceback.print_exc()
+    #    comm.Abort()
+    #    raise Exception
 
 
 
