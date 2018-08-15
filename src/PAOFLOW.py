@@ -1017,7 +1017,7 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
                 HRs=None
             if True:
 #            if do_bandwarping_calc.load_crit==False:
-                crit = find_min(nelec,HRs,None,False,alat,velkp,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,npool=npool,shift=shift,nl=nl,sh=sh)
+                crit = loop_min(nelec,HRs,None,False,alat,velkp,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,npool=npool,shift=shift,nl=nl,sh=sh)
 ##                crit = do_find_extrema.find_min(HRs,None,False,alat,velkp,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,npool=npool,shift=shift,nl=nl,sh=sh,nelec=nelec)
             else:
                 crit=np.array([[0.0,0.0,0.0,0.0,0.0,0.0],

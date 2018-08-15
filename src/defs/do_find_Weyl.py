@@ -175,8 +175,8 @@ def find_egap(HRaux,kq,Rfft,band,b_vectors,ef_index,ispin):
 #  print (E_kp.shape)
     egapp = E_kp[0,ef_index,ispin]-E_kp[0,ef_index-1,ispin]
 #    print (E_kp[0,:,:])
-    if egapp<0.00001:
-        print ('kq_frac:{},kq_cart:{},Egap:{}eV,between band#{}at{}eV and band#{}at{}eV'.format(kq,np.dot(kq,b_vectors),egapp,ef_index+1,E_kp[0,ef_index,ispin],ef_index,E_kp[0,ef_index-1,ispin]))
+#    if egapp<0.00001:
+#        print ('kq_frac:{},kq_cart:{},Egap:{}eV,between band#{}at{}eV and band#{}at{}eV'.format(kq,np.dot(kq,b_vectors),egapp,ef_index+1,E_kp[0,ef_index,ispin],ef_index,E_kp[0,ef_index-1,ispin]))
     return egapp
 
 
@@ -197,7 +197,19 @@ def do_search_grid(nk1,nk2,nk3,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_
 
 
 
-def find_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_range=[-0.5,0.5],npool=1,shift=0.0,nl=None,sh=None):
+
+
+def loop_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_range=[-0.5,0.5],npool=1,shift=0.0,nl=None,sh=None):
+    ini=[[0.25,0.25,0.25],[0.25,0.25,0.75],[0.25,0.75,0.25],[0.25,0.75,0.75],[0.75,0.25,0.25],[0.75,0.25,0.75],[0.75,0.75,0.25],[0.75,0.75,0.75]]
+    CANDIDATES = {}
+    candidates = 0
+    for initial in ini:
+        CANDIDATES,candidates=find_min(initial,CANDIDATES,candidates,ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_range=[-0.5,0.5],npool=1,shift=0.0,nl=None,sh=None)
+    print CANDIDATES 
+
+
+
+def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_range=[-0.5,0.5],npool=1,shift=0.0,nl=None,sh=None):
     band = bnd
     np.set_printoptions(precision=6, threshold=100, edgeitems=50, linewidth=350, suppress=True)
     comm.Barrier()
@@ -239,7 +251,7 @@ def find_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
     bounds_K[:,:,1] = search_grid+1.0*np.array([1.02/(snk1),1.02/(snk2),1.02/(snk3)])
 
     #initial guess is in the middle of each box
-    guess_K = search_grid+np.array([0.25/snk1,0.25/snk2,0.25/snk3])
+    guess_K = search_grid+np.array([initial[0]/snk1,initial[1]/snk2,initial[2]/snk3])
 
 
     #partial grid
@@ -314,7 +326,6 @@ def find_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
     sp=0
     ep=0
 
-    candidates = 1
     c = -1
     for i in range(sg.shape[0]//size+1):
 
@@ -358,11 +369,22 @@ def find_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
             #second pass
 #            if np.all(np.abs(solx[1])<0.01):
 #                print ('starting second pass')
-            if np.abs(solx[1]<0.01):
+            if np.abs(solx[1]<0.000001):
                 print ('Candidate No.{} found'.format(candidates))
                 print (solx[0])
                 print (solx[1])
-                candidates += 1
+               # print type(solx[0])
+                if len(Candidates.keys()) == 0:
+                    Candidates[str(solx[0])] = [solx[1]]
+                    candidates += 1
+                else:
+                    real = True
+                    for i in Candidates.keys():
+                        if np.linalg.norm(solx[0]-list(map(float, i[1:-1].split( ))))<0.001:
+                            real = False
+                    if real:
+                        Candidates[str(solx[0])] = [solx[1]]
+                        candidates += 1
 #                solx = OP.least_squares(lam_XiP,solx.x,bounds=bounds_K[i],jac='3-point',max_nfev=30000)
 #ftol=5.e-16,gtol=1.e-14,
 #                                        method='trf',jac='3-point',xtol=1.e-12,
@@ -384,6 +406,7 @@ def find_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
 #        all_extrema = all_extrema[zero_mask]
 #        if weyl:
 #            np.savetxt('weyl.dat',all_extrema)
+    return (Candidates,candidates)
     if weyl:
         raise SystemExit
 
