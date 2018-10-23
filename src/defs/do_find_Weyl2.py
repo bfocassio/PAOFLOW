@@ -27,10 +27,7 @@
 
 
 
-#import z2pack
-#import tbmodels
-import scipy.optimize as so
-#import matplotlib.pyplot as plt
+
 from scipy import fftpack as FFT
 import numpy as np
 import cmath
@@ -205,83 +202,34 @@ def do_search_grid(nk1,nk2,nk3,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_
 def loop_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_range=[-0.5,0.5],npool=1,shift=0.0,nl=None,sh=None):
     ini=[[0.25,0.25,0.25],[0.25,0.25,0.75],[0.25,0.75,0.25],[0.25,0.75,0.75],[0.75,0.25,0.25],[0.75,0.25,0.75],[0.75,0.75,0.25],[0.75,0.75,0.75]]
     CANDIDATES = {}
-#    CANDIDATES = {'[-0.007865 -0.33889  -0.033505]': [6.6127342213118112e-08], '[0.180072 0.179205 0.005416]': [1.523763586017135e-06], '[-0.507005 -0.508404 0.094956]': [7.777151428328688e-06], '[-0.491938 -0.016849 0.094221]': [3.189758233310136e-06], '[0.345998 -0.338489 0.033075]': [2.2020509471282201e-06], '[-0.008887 0.348185 0.034663]': [5.9531129448231468e-07], '[ 0.492577  0.492016 -0.094952]': [4.4537277532619157e-08], '[-0.492995 0.508404 -0.094956]': [7.5562735711992568e-06], '[-0.492577 0.507984 0.094952]': [4.4379632659213852e-06], '[-0.006277 0.34548 -0.033989]': [4.1678444084869426e-06], '[-0.34551 0.006347 -0.034031]': [2.9474345103197575e-06], '[ 0.005803  0.339145 -0.033455]': [2.3650376379524829e-08], '[ 0.491938  0.016849 -0.094221]': [7.9981158307429467e-08], '[ 0.348214 -0.008945 -0.034718]': [6.2017560392702009e-08], '[-0.348214 0.008945 0.034718]': [6.6011608114424636e-07], '[-0.345998  0.338489 -0.033075]': [6.5991954220634419e-08], '[ 0.344701 -0.338921 -0.033313]': [3.5319852778603611e-08], '[0.175098 -0.358254 0.005226]': [6.2559472217837975e-07], '[-0.016879 -0.485697 0.094325]': [4.8522886401530796e-06], '[0.007865 0.33889 0.033505]': [5.9198951841976655e-07], '[ 0.492577 -0.507984 -0.094952]': [4.8026373530851707e-08], '[0.507423 -0.492016 0.094952]': [4.3749342975296646e-06], '[0.507005 -0.491596 -0.094956]': [7.4392469254919158e-06], '[ 0.179294  0.179983 -0.005416]': [6.7186063379409688e-08], '[-0.507423  0.492016 -0.094952]': [6.0839751347963045e-08], '[-0.33888 -0.007829 0.033472]': [1.7667997588843853e-06], '[ 0.008887 -0.348185 -0.034663]': [1.3431241871475486e-07], '[-0.486367 -0.01688 -0.094333]': [3.4468396935549706e-06], '[0.175719 -0.358357 -0.005243]': [2.9719146784207284e-06], '[-0.35836 0.175699 0.005238]': [1.6496662409853924e-06], '[ 0.508062 -0.016849  0.094221]': [6.0724664449618437e-08], '[-0.338955 0.344642 0.033263]': [1.2423807027872602e-06], '[-0.005803 -0.339145 0.033455]': [1.1170258334275429e-06], '[-0.492577 -0.492016 0.094952]': [4.3190014239746777e-06], '[-0.016844 -0.491229 -0.094208]': [1.8106358440350689e-08], '[-0.175719  0.358357  0.005243]': [4.3814737823999472e-08], '[ 0.33888   0.007829 -0.033472]': [2.3856515554698809e-08], '[0.339136 0.005772 0.033433]': [1.7278282039429049e-06], '[-0.492995 -0.491596 -0.094956]': [6.6824492619965703e-08], '[ 0.507005  0.508404 -0.094956]': [6.5442281552141601e-08], '[ 0.35836  -0.175699 -0.005238]': [9.2643591187435703e-08], '[-0.507423 -0.507984 -0.094952]': [5.2774585021508891e-08], '[-0.344701 0.338921 0.033313]': [2.0506655751539871e-06], '[0.016844 -0.508771 0.094208]': [3.7555935471222934e-06], '[0.492995 0.491596 0.094956]': [7.4254546359453499e-06], '[-0.338517  0.345936 -0.033014]': [2.7901524340956385e-08], '[-0.180072 -0.179205 -0.005416]': [2.1801865979220736e-08], '[ 0.34551  -0.006347  0.034031]': [1.3187673206238593e-07], '[ 0.338955 -0.344642 -0.033263]': [1.1229381335908784e-07], '[0.338517 -0.345936 0.033014]': [3.5142918997366213e-06], '[ 0.016879  0.485697 -0.094325]': [7.996020182088337e-08], '[ 0.492995 -0.508404  0.094956]': [6.6139643997709108e-08], '[-0.339136 -0.005772 -0.033433]': [6.3970294089665813e-08], '[-0.358257  0.175078 -0.005221]': [4.2230067359705359e-08], '[0.358257 -0.175078 0.005221]': [3.7260399735061789e-06], '[ 0.486367  0.01688   0.094333]': [7.1513668944978015e-08], '[-0.016844  0.508771 -0.094208]': [6.320062662101833e-08], '[-0.507005  0.491596  0.094956]': [8.2623585695440482e-08], '[ 0.006277 -0.34548   0.033989]': [4.7847954903756929e-08], '[0.507423 0.507984 0.094952]': [4.5077906621060482e-06], '[-0.508062 0.016849 -0.094221]': [3.3789778068060716e-06], '[-0.175098  0.358254 -0.005226]': [6.169616947881984e-08], '[0.016844 0.491229 0.094208]': [3.7571603356822969e-06], '[-0.179294 -0.179983 0.005416]': [3.1078843576864967e-06]}
     candidates = 0
     print ("Start Finding Weyl Points")
     for initial in ini:
         print ('starting initial at {}'.format(initial))
         CANDIDATES,candidates,Rfft=find_min(initial,CANDIDATES,candidates,ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_range=[-0.5,0.5],npool=1,shift=0.0,nl=None,sh=None)
     band =bnd
-   # for ispin in range(nspin):
-   #     CANDIDATES,candidates=sym_test(CANDIDATES,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin)    
-    print (CANDIDATES) 
-#    WEYL = {}
+#    for ispin in range(nspin):
+#        CANDIDATES,candidates=sym_test(CANDIDATES,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin)    
+    print CANDIDATES 
 
-
-    #plt.switch_backend('agg')
-#    model = tbmodels.Model.from_wannier_files(hr_file='z2pack_hamiltonian.dat')
-#    system = z2pack.tb.System(model,bands=30)
-
- #   def gap(k):
- #       eig = model.eigenval(k)
- #       return eig[30] - eig[29]
-
-
-  #  candidates=0
-  #  cart=[]
-  #  for i in CANDIDATES.keys():
-  #      cart.append(np.dot(list(map(float, i[1:-1].split( ))),b_vectors))
-  #  for p in cart:
-  #      for x in [-1,1]:
-  #          for y in [-1,1]:
-  #              for z in [-1,1]:
-  #                  kq = np.dot([p[0]*x,p[1]*y,p[2]*z],np.linalg.inv(b_vectors))
-  #                  result_1 = z2pack.surface.run(system=system,surface=z2pack.shape.Sphere(center=tuple(kq), radius=0.005))
-  #                  invariant = z2pack.invariant.chern(result_1)
-  #                  print (tuple(kq))
-  #                  print ('Chirality at {};{}'.format(kq,invariant))
-  #                  if invariant != 0:
-  #                      new = True
-  #                      for t in WEYL.keys():
-  #                          if np.linalg.norm(np.asarray(kq)-list(map(float, t[1:-1].split( ))))<0.005:
-  #                              new=False
-  #                      if new:
-  #                          candidates += 1
-  #                          WEYL[str(kq).replace(",", "")]=invariant
-  #                          print ('found Weyl point No. {} at {}'.format(candidates,kq))
-  #  print (WEYL)  
-
-
-
-def sym_test(Candidates,NewCandidates,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin):
+def sym_test(Candidates,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin):
     print ('starting sym test')
-    for i in NewCandidates.keys():
+    for i in Candidates.keys():
         p=list(map(float, i[1:-1].split( )))
-        p=np.dot(p,b_vectors)
         for x in [-1,1]:
             for y in [-1,1]:
                 for z in [-1,1]:
-                    kq = np.dot([p[0]*x,p[1]*y,p[2]*z],np.linalg.inv(b_vectors))
+                    kq = [p[0]*x,p[1]*y,p[2]*z]
                     egap = find_egap(HRaux,kq,Rfft,band,b_vectors,ef_index,ispin)
-                    if egap<0.00001:
+                    if egap<<0.000001:
                         new = True
                         for t in Candidates.keys():
-#                            print (t)
-#                            print (kq)
-                       #     try:
-#                            print (list(map(float, t[1:-1].split( ))))
-                            
-                            if np.linalg.norm(np.asarray(kq)-list(map(float, t[1:-1].split( ))))<0.0001:
+                            if np.linalg.norm(solx[0]-list(map(float, t[1:-1].split( ))))<0.001:
                                 new = False
-                       #     except:
-                       #         print (list(map(float, t[1:-1].split(','))))
-                            
-                       #         if np.linalg.norm(np.asarray(kq)-list(map(float, t[1:-1].split(','))))<0.001:
-                       #             new = False
                         if new:
                             candidates += 1
-                            print ('Sym Candidate No.{} found at {} with gap:{} eV'.format(candidates,str(kq).replace(",", ""),egap))
-                            Candidates[str(kq).replace(",", "")] = [egap]
+                            print ('Candidate No.{} found at {} with gap:{} eV'.format(candidates,kq,egap))
+                            Candidates[str(kq)] = [egap]
     return Candidates,candidates
 
 
@@ -380,7 +328,6 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
     weyl=True
 
 
-    NewCandidates = {}
     R,_,_,_,_ = get_R_grid_fft(nr1,nr2,nr3,a_vectors)
     Rfft=R
 
@@ -405,7 +352,7 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
     fp=0
     sp=0
     ep=0
-    
+
     c = -1
     for i in range(sg.shape[0]//size+1):
 
@@ -418,12 +365,7 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
         i     = sg[c][0]
         b     = sg[c][1]
         ispin = sg[c][2]
-     #   print ('##########################')
-     #   K = [-0.492995, -0.015409, -0.094956]
-     #   K = [-0.491938, -0.016849, -0.094221]
-     #   gap = find_egap(HRaux,K,Rfft,band,b_vectors,ef_index,ispin)
-     #   print ('gap at [-0.491938, -0.016849, -0.094221] : {} eV'.format(gap))
-     #   exit()
+        NewCandidates = {}
         if weyl:
             lam_XiP  = lambda K: find_egap(HRaux,K,Rfft,band,b_vectors,ef_index,ispin)
 #loop over the search grid 
@@ -454,12 +396,12 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
             #second pass
 #            if np.all(np.abs(solx[1])<0.01):
 #                print ('starting second pass')
-            if np.abs(solx[1]<0.00001):
+            if np.abs(solx[1]<0.000001):
                # print ('Candidate No.{} found'.format(candidates))
                # print (solx[0])
                # print (solx[1])
                # print type(solx[0])
-                if len(Candidates.keys()) == 0:
+               if len(Candidates.keys()) == 0:
                     Candidates[str(solx[0])] = [solx[1]]
                     NewCandidates[str(solx[0])] = [solx[1]]
                     candidates += 1
@@ -467,7 +409,7 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
                 else:
                     real = True
                     for i in Candidates.keys():
-                        if np.linalg.norm(solx[0]-list(map(float, i[1:-1].split( ))))<0.0001:
+                        if np.linalg.norm(solx[0]-list(map(float, i[1:-1].split( ))))<0.001:
                             real = False
                     if real:
                         candidates += 1
@@ -491,8 +433,8 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
  #           print(e)                   
  #           continue
 
- #       Candidates,candidates=sym_test(Candidates,NewCandidates,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin)  
 
+        Candidates,candidates=sym_test(NewCandidates,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin)  
     comm.Barrier()
  #   all_extrema = Gatherv_wrap(extrema)
 
@@ -501,12 +443,12 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
 #        if weyl:
 #            np.savetxt('weyl.dat',all_extrema)
 
-#    Candidates,candidates=sym_test(NewCandidates,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin)  
     return (Candidates,candidates,Rfft)
     if weyl:
         raise SystemExit
 
-    comm.Barrier() 
+    comm.Barrier()
+
     tempt = np.asarray([timer_avg],dtype=float)
     tottt = np.zeros((1),dtype=float)
     comm.Reduce(tempt,tottt)
