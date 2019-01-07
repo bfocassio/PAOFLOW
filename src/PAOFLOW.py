@@ -673,10 +673,11 @@ class PAOFLOW:
       arrays['Hksp'] = gather_scatter(arrays['Hksp'], 1, attr['npool'])
       nawf = attr['nawf']
       snktot = arrays['Hksp'].shape[1]
+
       arrays['Hksp'] = np.reshape(np.moveaxis(arrays['Hksp'],0,1), (snktot,nawf,nawf,nspin))
       
       # Reduce Hksp to k-points in the irreducible Brillouin Zone
-      
+              
       numbers = [1,1]
       cell = (arrays['a_vectors'],arrays['tau']/attr['alat'],numbers)
       if self.rank == 0: print('Space group',spg.get_spacegroup(cell, symprec=1e-5))
@@ -684,7 +685,7 @@ class PAOFLOW:
       mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
       mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
       irk = grid[np.unique(mapping)] / np.array(mesh, dtype=float)
-      _,irw = np.unique(mapping,return_counts=True)#/np.prod(mesh)
+      _,irw = np.unique(mapping,return_counts=True)
       
       nirk = len(np.unique(mapping))
       if self.rank == 0: print("Number of ir-kpoints: %d" % nirk)
@@ -693,9 +694,10 @@ class PAOFLOW:
         aux[n] = arrays['Hksp'][mapping[n],:,:,:]
       arrays['Hksp'] = aux
       arrays['irw'] = irw
+      arrays['kq_wght'] = irw/np.prod(mesh)
       aux = None
 
-      get_K_grid_fft(self.data_controller)
+      #get_K_grid_fft(self.data_controller)
 
       # Report new memory requirements
       if self.rank == 0:

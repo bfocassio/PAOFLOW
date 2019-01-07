@@ -43,13 +43,11 @@ def do_dos ( data_controller, emin=-10., emax=2. ):
 
     dosaux = np.zeros((esize), order="C")
 
-    E_k = np.asarray(arry['E_k'])
-    print(arry['irw'])
-    for n in range(len(arry['irw'])):
-      E_k[n,:bnd,ispin] = arry['E_k'][n,:bnd,ispin]*arry['irw'][n]
+    E_k = arry['E_k'][:,:bnd,ispin]
 
     for ne in range(esize):
-      dosaux[ne] = np.sum(np.exp(-((ene[ne]-E_k)/attr['delta'])**2))
+      for n in range(bnd):
+        dosaux[ne] += np.sum(arry['irw'][:]*np.exp(-((ene[ne]-E_k[:,n])/attr['delta'])**2))
 
     dos = np.zeros((esize), dtype=float) if rank == 0 else None
 
