@@ -684,20 +684,19 @@ class PAOFLOW:
       
       mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
       mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
-      irk = grid[np.unique(mapping)] / np.array(mesh, dtype=float)
-      _,irw = np.unique(mapping,return_counts=True)
-      
+      _,irk,irw = np.unique(mapping,return_index=True,return_counts=True)
+                      
       nirk = len(np.unique(mapping))
       if self.rank == 0: print("Number of ir-kpoints: %d" % nirk)
       aux = np.zeros((nirk,nawf,nawf,nspin),dtype=complex)
       for n in range(nirk):
-        aux[n] = arrays['Hksp'][mapping[n],:,:,:]
+        aux[n] = arrays['Hksp'][irk[n],:,:,:]
       arrays['Hksp'] = aux
       arrays['irw'] = irw
       arrays['kq_wght'] = irw/np.prod(mesh)
       aux = None
 
-      #get_K_grid_fft(self.data_controller)
+      get_K_grid_fft(self.data_controller)
 
       # Report new memory requirements
       if self.rank == 0:
@@ -742,12 +741,37 @@ class PAOFLOW:
         if self.rank == 0:
           nktot = attr['nkpnts']
           nawf,_,nk1,nk2,nk3,nspin = arrays['Hks'].shape
-          arrays['Hks'] = np.moveaxis(np.reshape(arrays['Hks'],(nawf,nawf,nktot,nspin),order='C'), 2, 0)
+          arrays['Hks'] = np.reshape(np.moveaxis(arrays['Hks'], [0,1], [3,4]),(nktot,nawf,nawf,nspin))
+          
+          # Reduce Hks to k-points in the irreducible Brillouin Zone
+                          
+          numbers = [1,1]
+          cell = (arrays['a_vectors'],arrays['tau']/attr['alat'],numbers)
+          if self.rank == 0: print('Space group',spg.get_spacegroup(cell, symprec=1e-5))
+          
+          mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
+          mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
+          _,irk,irw = np.unique(mapping,return_index=True,return_counts=True)
+                    
+          nirk = len(np.unique(mapping))
+          if self.rank == 0: print("Number of ir-kpoints: %d" % nirk)
+          aux = np.zeros((nirk,nawf,nawf,nspin),dtype=complex)
+          for n in range(nirk):
+            aux[n,:,:,:] = arrays['Hks'][irk[n],:,:,:]
+          arrays['Hksp'] = aux
+          
+          arrays['irw'] = irw
+          arrays['kq_wght'] = irw/np.prod(mesh)
+          aux = None
+                    
+#          arrays['Hks'] = np.moveaxis(arrays['Hks'],(nawf,nawf,nirk,nspin), 2, 0)
+#          arrays['Hks'] = np.moveaxis(np.reshape(arrays['Hks'],(nawf,nawf,nktot,nspin),order='C'), 2, 0)
+
         else:
           arrays['Hks'] = None
-        arrays['Hksp'] = scatter_full(arrays['Hks'], attr['npool'])
+#        arrays['Hksp'] = scatter_full(arrays['Hks'], attr['npool'])
         del arrays['Hks']
-
+      
       do_pao_eigh(self.data_controller)
 
       ### PARALLELIZATION

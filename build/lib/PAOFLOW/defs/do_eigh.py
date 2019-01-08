@@ -55,7 +55,6 @@ def do_pao_eigh ( data_controller ):
   arrays,attributes = data_controller.data_dicts()
   snktot,nawf,_,nspin = arrays['Hksp'].shape
 
-#  snktot = nirk
   arrays['E_k'] = np.zeros((snktot,nawf,nspin), dtype=float)
   arrays['v_k'] = np.zeros((snktot,nawf,nawf,nspin), dtype=complex)
 
