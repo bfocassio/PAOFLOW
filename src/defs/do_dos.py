@@ -36,9 +36,6 @@ def do_dos ( data_controller, emin=-10., emax=2. ):
   esize = 1000
   ene = np.linspace(emin, emax, esize)
 
-#  if rank == 0 and attr['verbose']:
-#    print('Writing DoS Files')
-
   for ispin in range(attr['nspin']):
 
     dosaux = np.zeros((esize), order="C")
@@ -48,7 +45,6 @@ def do_dos ( data_controller, emin=-10., emax=2. ):
     for ne in range(esize):
       for n in range(bnd):
         dosaux[ne] += np.sum(arry['irw'][:]*np.exp(-((ene[ne]-E_k[:,n])/attr['delta'])**2))
-#        dosaux[ne] += np.sum(np.exp(-((ene[ne]-E_k[:,n])/attr['delta'])**2))
 
     dos = np.zeros((esize), dtype=float) if rank == 0 else None
 
