@@ -731,14 +731,11 @@ class PAOFLOW:
         arrays['dHksp'] = aux
         aux = None
 
-        arrays['irw'] = irw
-        arrays['kq_wght'] = irw/np.prod(mesh)
-        
+        arrays['irw'] = irw       
       
       arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
       arrays['dHksp'] = scatter_full((arrays['dHksp'] if self.rank==0 else None), attr['npool'])
       arrays['irw'] = scatter_full((arrays['irw'] if self.rank==0 else None), attr['npool'])
-      arrays['kq_wght'] = scatter_full((arrays['kq_wght'] if self.rank==0 else None), attr['npool'])
       
 #      get_K_grid_fft(self.data_controller)
 
@@ -850,7 +847,7 @@ class PAOFLOW:
 
 
 
-  def gradient_and_momenta ( self ):
+  def momenta ( self ):
     '''
     Calculate the Gradient of the k-space Hamiltonian, 'Hksp'
     Requires 'Hksp'
@@ -863,50 +860,12 @@ class PAOFLOW:
         None
     '''
     from .defs.do_momentum import do_momentum
-    from .defs.communication import gather_scatter, gather_full, scatter_full
 
     arrays,attr = self.data_controller.data_dicts()
 
-#    try:      
-#      for ik in range(snktot):
-#        for ispin in range(nspin):
-#          arrays['Hksp'][ik,:,:,ispin] = (np.conj(arrays['Hksp'][ik,:,:,ispin].T) + arrays['Hksp'][ik,:,:,ispin])/2.
-#
-#      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snktot, nawf**2, nspin))
-#      arrays['Hksp'] = np.moveaxis(gather_scatter(arrays['Hksp'],1,attr['npool']), 0, 1)
-#      snawf,_,nspin = arrays['Hksp'].shape
-#      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin))
-#
-#      do_gradient(self.data_controller)
-#
-#      # No more need for k-space Hamiltonian
-#      del arrays['Hksp']
-#
-#      ### PARALLELIZATION
-#      #gather dHksp on nawf*nawf and scatter on k points
-#      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
-#      arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
-#      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
-#    except:
-#      self.report_exception('gradient_and_momenta')
-#      if attr['abort_on_exception']:
-#        self.comm.Abort()
-#
-#    self.report_module_time('Gradient')
-
-    ### DEV: Proposed to remove this and calculate pksp or velkp when required
-    # Compute the momentum operator p_n,m(k) (and kinetic energy operator)
-    
-#    # reduce dHksp to the ir BZ
-#    snktot = arrays['irk'].shape[0]
-#    aux = np.zeros((snktot,3,nawf,nawf,nspin),dtype=complex)
-#    for n in range(snktot):
-#      aux[n,:,:,:,:] =  arrays['dHksp'][arrays['irk'][n],:,:,:,:]
-#    arrays['dHksp'] = aux
-    
     do_momentum(self.data_controller)
     
-#    arrays['pksp'] = scatter_full((arrays['pksp'] if self.rank==0 else None), attr['npool'])
+    del(arrays['dHksp'])
     
     self.report_module_time('Momenta')
 

@@ -113,7 +113,7 @@ def L_loop ( data_controller, temp, smearing, ene, velkp, t_tensor, alpha, ispin
   snktot = arrays['E_k'].shape[0]
 
   bnd = attributes['bnd']
-  kq_wght = 1./attributes['nkpnts']
+  kq_wght = arrays['irw']/attributes['nkpnts']
 
   if smearing is not None and smearing != 'gauss' and smearing != 'm-p':
     print('%s Smearing Not Implemented.'%smearing)
@@ -137,6 +137,6 @@ def L_loop ( data_controller, temp, smearing, ene, velkp, t_tensor, alpha, ispin
       i = t_tensor[l][0]
       j = t_tensor[l][1]
       tau = get_tau(data_controller, ['accoustic', 'optical'])
-      L[i,j,:] += np.sum(kq_wght*tau*velkp[:,i,n,ispin]*velkp[:,j,n,ispin]*(smearA*EtoAlpha).T, axis=1)
+      L[i,j,:] += np.sum(kq_wght[:]*tau*velkp[:,i,n,ispin]*velkp[:,j,n,ispin]*(smearA*EtoAlpha).T, axis=1)
 
   return L

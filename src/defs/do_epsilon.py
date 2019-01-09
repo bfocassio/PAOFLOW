@@ -95,11 +95,11 @@ def do_epsilon ( data_controller, ene, ispin, ipol, jpol ):
 
   ieps = np.zeros(esize, dtype=float)
 
-  kq_wght = 1./attributes['nkpnts']
-  epsi *= 64.0*np.pi*kq_wght/(attributes['omega'])
+#  kq_wght = 1./attributes['nkpnts']
+  epsi *= 64.0*np.pi/(attributes['omega'])
   # includes correction for apparent rigid shift of epsr - solved by getting the right e -> 0 limit from KK.
   if not attributes['metal']:
-    epsr =  1. + epsr*64.0*np.pi/(attributes['omega']*attributes['nkpnts']) - (epsr[4]-epsr0[4])*64.0*np.pi/(attributes['omega']*attributes['nkpnts'])
+    epsr =  1. + epsr*64.0*np.pi/(attributes['omega']) - (epsr[4]-epsr0[4])*64.0*np.pi/(attributes['omega'])
   else:
     epsr =  1. + epsr*64.0*np.pi/(attributes['omega']*attributes['nkpnts']) 
   eels = epsi/(epsi**2+epsr**2)
@@ -128,10 +128,10 @@ def eps_loop ( data_controller, ene, ispin, ipol, jpol):
   delta = attributes['delta']
   snktot = arrays['pksp'].shape[0]
   smearing = attributes['smearing']
+  kq_wght = arrays['irw']/attributes['nkpnts']
 
   Ef = 0.
   eps=1.e-8
-  kq_wght = 1./attributes['nkpnts']
 
   jdos = np.zeros(esize, dtype=float)
   epsi = np.zeros(esize, dtype=float)
@@ -152,7 +152,7 @@ def eps_loop ( data_controller, ene, ispin, ipol, jpol):
 
   bndmax = bnd
 
-  for ik in range(fn.shape[0]):
+  for ik in range(snktot):
     for iband2 in range(bndmax):
        for iband1 in range(bndmax):
           if iband1 != iband2:
@@ -160,7 +160,7 @@ def eps_loop ( data_controller, ene, ispin, ipol, jpol):
              f_nm =  fn[ik,iband2]-fn[ik,iband1]
              if np.abs(f_nm) > 2.e-3 and fn[ik,iband1] > 1.e-4 and fn[ik,iband2] < 2.0:
                 pksp2 = np.real(arrays['pksp'][ik,ipol,iband1,iband2,ispin]*arrays['pksp'][ik,jpol,iband2,iband1,ispin])
-                pksp2 *= attributes['alat']*BOHR_RADIUS_ANGS/(EPS0*RYTOEV)
+                pksp2 *= attributes['alat']*BOHR_RADIUS_ANGS/(EPS0*RYTOEV)*kq_wght[ik]
                 epsi[:] +=  pksp2*delta*ene[:]*fn[ik,iband1]/(((E_diff_nm**2-ene[:]**2)**2+delta**2*ene[:]**2)*(E_diff_nm))
                 epsr[:] +=  pksp2*(E_diff_nm**2-ene[:]**2)*fn[ik,iband1]/(((E_diff_nm**2-ene[:]**2)**2+delta**2*ene[:]**2)*(E_diff_nm))
                 jdos[:] +=  delta*(fn[ik,iband1]-fn[ik,iband2])/(np.pi*((E_diff_nm-ene[:])**2+delta**2))
@@ -185,10 +185,10 @@ def eps_loop ( data_controller, ene, ispin, ipol, jpol):
     elif smearing == 'm-p':
       fnF = metpax(arrays['E_k'][:,:bnd,ispin], Ef, arrays['deltakp'][:,:bnd,ispin])
 
-    for ik in range(fn.shape[0]):
+    for ik in range(snktot):
       for iband1 in range(bndmax):
         pksp2 = np.real(arrays['pksp'][ik,ipol,iband1,iband1,ispin]*arrays['pksp'][ik,jpol,iband1,iband1,ispin])
-        pksp2 *= attributes['alat']*BOHR_RADIUS_ANGS/(EPS0*RYTOEV**3)
+        pksp2 *= attributes['alat']*BOHR_RADIUS_ANGS/(EPS0*RYTOEV**3)*kq_wght[ik]
         epsi[:] +=  pksp2*delta*ene[:]*fnF[ik,iband1]/((ene[:]**4+delta**2*ene[:]**2)*degauss)
         epsr[:] -=  pksp2*fnF[ik,iband1]*ene[:]**2/((ene[:]**4+delta**2*ene[:]**2)*degauss)
 

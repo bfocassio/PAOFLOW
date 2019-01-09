@@ -31,7 +31,7 @@ def do_dos ( data_controller, emin=-10., emax=2. ):
 
   emax = np.amin(np.array([attr['shift'], emax]))
 
-  # DOS calculation with gaussian smearing
+# DOS calculation with gaussian smearing
 #### Hardcoded 'de'
   esize = 1000
   ene = np.linspace(emin, emax, esize)
