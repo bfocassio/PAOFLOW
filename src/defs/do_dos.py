@@ -45,6 +45,7 @@ def do_dos ( data_controller, emin=-10., emax=2. ):
     for ne in range(esize):
       for n in range(bnd):
         dosaux[ne] += np.sum(arry['irw'][:]*np.exp(-((ene[ne]-E_k[:,n])/attr['delta'])**2))
+#        dosaux[ne] += np.sum(np.exp(-((ene[ne]-E_k[:,n])/attr['delta'])**2))
 
     dos = np.zeros((esize), dtype=float) if rank == 0 else None
 
@@ -79,20 +80,22 @@ def do_dos_adaptive ( data_controller, emin=-10., emax=2. ):
 
   for ispin in range(attr['nspin']):
 
-    E_k = arry['E_k'][:,:bnd,ispin].reshape(arry['E_k'].shape[0]*bnd)
-    delta = np.ravel(arry['deltakp'][:,:bnd,ispin], order='C')
+    E_k = arry['E_k'][:,:bnd,ispin]  #.reshape(arry['E_k'].shape[0]*bnd)
+    delta = arry['deltakp'][:,:bnd,ispin]
+#    delta = np.ravel(arry['deltakp'][:,:bnd,ispin], order='C')
 
 ### Parallelization wastes time and memory here!!! 
     dosaux = np.zeros((esize), dtype=float)
 
     for ne in range(esize):
-      if attr['smearing'] == 'gauss':
-        # adaptive Gaussian smearing
-        dosaux[ne] = np.sum(gaussian(ene[ne],E_k,delta))
+      for n in range(bnd):
+        if attr['smearing'] == 'gauss':
+          # adaptive Gaussian smearing
+          dosaux[ne] += np.sum(arry['irw'][:]*gaussian(ene[ne],E_k[:,n],delta[:,n]))
 
-      elif attr['smearing'] == 'm-p':
-        # adaptive Methfessel and Paxton smearing
-        dosaux[ne] = np.sum(metpax(ene[ne],E_k,delta))
+        elif attr['smearing'] == 'm-p':
+          # adaptive Methfessel and Paxton smearing
+          dosaux[ne] += np.sum(arry['irw'][:]*metpax(ene[ne],E_k[:,n],delta[:,n]))
 
     dos = np.zeros((esize), dtype=float) if rank==0 else None
 

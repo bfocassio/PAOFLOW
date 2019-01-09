@@ -685,8 +685,9 @@ class PAOFLOW:
         
         mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
         mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
-        grid,irk,inv,irw = np.unique(mapping,return_index=True,return_inverse=True,return_counts=True)
-                        
+        _,irk,inv,irw = np.unique(mapping,return_index=True,return_inverse=True,return_counts=True)
+        grid=grid/mesh
+              
         nirk = len(np.unique(mapping))
         if self.rank == 0: print("Number of ir-kpoints: %d" % nirk)
         aux = np.zeros((nirk,nawf,nawf,nspin),dtype=complex)
@@ -763,7 +764,8 @@ class PAOFLOW:
           
           mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
           mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
-          grid,irk,inv,irw = np.unique(mapping,return_index=True,return_inverse=True,return_counts=True)
+          grid=grid/mesh
+          _,irk,inv,irw = np.unique(mapping,return_index=True,return_inverse=True,return_counts=True)
                     
           nirk = len(np.unique(mapping))
           if self.rank == 0: print("Number of ir-kpoints: %d" % nirk)
@@ -841,6 +843,7 @@ class PAOFLOW:
         arrays['Hksp'] = aux
       arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
       arrays['inv'] = scatter_full((arrays['inv'] if self.rank==0 else None), attr['npool'])
+      
       snktot,nawf,_,nspin = arrays['Hksp'].shape
       
       for ik in range(snktot):
@@ -859,7 +862,7 @@ class PAOFLOW:
 
       ### PARALLELIZATION
       #gather dHksp on nawf*nawf and scatter on k points
-#      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
+      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
       arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
       arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
     except:
