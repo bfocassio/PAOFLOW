@@ -55,3 +55,4 @@ def do_adaptive_smearing ( data_controller ):
 
   arrays['deltakp'] = deltakp
   arrays['deltakp2'] = deltakp2
+
