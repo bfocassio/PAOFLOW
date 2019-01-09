@@ -622,6 +622,7 @@ class PAOFLOW:
     '''
     from .defs.get_K_grid_fft import get_K_grid_fft
     from .defs.do_double_grid import do_double_grid
+    from .defs.do_gradient import do_gradient
     from .defs.communication import gather_scatter,scatter_full
 
     arrays,attr = self.data_controller.data_dicts()
@@ -676,7 +677,35 @@ class PAOFLOW:
 
       arrays['Hksp'] = np.reshape(np.moveaxis(arrays['Hksp'],0,1), (snktot,nawf,nawf,nspin))
       
-      # Reduce Hksp to k-points in the irreducible Brillouin Zone
+      
+#      # do gradient
+      try:   
+        for ik in range(snktot):
+          for ispin in range(nspin):
+            arrays['Hksp'][ik,:,:,ispin] = (np.conj(arrays['Hksp'][ik,:,:,ispin].T) + arrays['Hksp'][ik,:,:,ispin])/2.
+        arrays['Haux'] = arrays['Hksp']
+        
+        arrays['Hksp'] = np.reshape(arrays['Hksp'], (snktot, nawf**2, nspin))
+        arrays['Hksp'] = np.moveaxis(gather_scatter(arrays['Hksp'],1,attr['npool']), 0, 1)
+        snawf,_,nspin = arrays['Hksp'].shape
+        arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin))
+
+        do_gradient(self.data_controller)
+
+        arrays['Hksp'] = arrays['Haux']
+        del(arrays['Haux'])
+        
+#        ### PARALLELIZATION
+#        #gather dHksp on nawf*nawf and scatter on k points
+        arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
+        arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
+        arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
+      except:
+        self.report_exception('gradient_and_momenta')
+        if attr['abort_on_exception']:
+          self.comm.Abort()
+          
+      # Reduce Hksp and dHksp to k-points in the irreducible Brillouin Zone
       
       if self.rank == 0:         
         numbers = [1,1]
@@ -690,23 +719,33 @@ class PAOFLOW:
               
         nirk = len(np.unique(mapping))
         if self.rank == 0: print("Number of ir-kpoints: %d" % nirk)
+ 
         aux = np.zeros((nirk,nawf,nawf,nspin),dtype=complex)
         for n in range(nirk):
           aux[n] = arrays['Hksp'][irk[n],:,:,:]
         arrays['Hksp'] = aux
-        arrays['irw'] = irw
-        arrays['irk'] = irk
-        arrays['inv'] = inv
-        arrays['grid'] = grid
-        arrays['kq_wght'] = irw/np.prod(mesh)
         aux = None
+          
+        aux = np.zeros((nirk,3,nawf,nawf,nspin),dtype=complex)
+        for n in range(nirk):
+          aux[n,:,:,:,:] =  arrays['dHksp'][irk[n],:,:,:,:]
+        arrays['dHksp'] = aux
+        aux = None
+
+        arrays['irw'] = irw
+#        arrays['irk'] = irk
+#        arrays['inv'] = inv
+#        arrays['grid'] = grid
+        arrays['kq_wght'] = irw/np.prod(mesh)
+        
       
       arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
+      arrays['dHksp'] = scatter_full((arrays['dHksp'] if self.rank==0 else None), attr['npool'])
       arrays['irw'] = scatter_full((arrays['irw'] if self.rank==0 else None), attr['npool'])
-      arrays['irk'] = scatter_full((arrays['irk'] if self.rank==0 else None), attr['npool'])
-      arrays['inv'] = scatter_full((arrays['inv'] if self.rank==0 else None), attr['npool'])
+#      arrays['irk'] = scatter_full((arrays['irk'] if self.rank==0 else None), attr['npool'])
+#      arrays['inv'] = scatter_full((arrays['inv'] if self.rank==0 else None), attr['npool'])
       arrays['kq_wght'] = scatter_full((arrays['kq_wght'] if self.rank==0 else None), attr['npool'])
-      arrays['grid'] = scatter_full((arrays['grid'] if self.rank==0 else None), attr['npool'])
+#      arrays['grid'] = scatter_full((arrays['grid'] if self.rank==0 else None), attr['npool'])
       
 #      get_K_grid_fft(self.data_controller)
 
@@ -776,6 +815,7 @@ class PAOFLOW:
           arrays['grid'] = grid
           arrays['irw'] = irw
           arrays['irk'] = irk
+          arrays['inv'] = inv
           arrays['kq_wght'] = irw/np.prod(mesh)
           aux = None
         else:
@@ -824,81 +864,51 @@ class PAOFLOW:
     Returns:
         None
     '''
-    from .defs.do_gradient import do_gradient
     from .defs.do_momentum import do_momentum
     from .defs.communication import gather_scatter, gather_full, scatter_full
 
     arrays,attr = self.data_controller.data_dicts()
 
-    try:
-      # reconstruct the full Hksp from the irreducible BZ
-      arrays['Hksp'] = gather_full(arrays['Hksp'], attr['npool'])
-      arrays['inv'] = gather_full(arrays['inv'], attr['npool'])
-      if self.rank == 0:
-        nktot = attr['nk1']*attr['nk2']*attr['nk3']
-        snktot,nawf,_,nspin = arrays['Hksp'].shape
-        aux = np.zeros((nktot,nawf,nawf,nspin),dtype=complex)
-        for n in range(nktot):
-          aux[n,:,:,:] =  arrays['Hksp'][arrays['inv'][n],:,:,:]
-        arrays['Hksp'] = aux
-      arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
-      arrays['inv'] = scatter_full((arrays['inv'] if self.rank==0 else None), attr['npool'])
-      
-      snktot,nawf,_,nspin = arrays['Hksp'].shape
-      
-      for ik in range(snktot):
-        for ispin in range(nspin):
-          arrays['Hksp'][ik,:,:,ispin] = (np.conj(arrays['Hksp'][ik,:,:,ispin].T) + arrays['Hksp'][ik,:,:,ispin])/2.
-
-      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snktot, nawf**2, nspin))
-      arrays['Hksp'] = np.moveaxis(gather_scatter(arrays['Hksp'],1,attr['npool']), 0, 1)
-      snawf,_,nspin = arrays['Hksp'].shape
-      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin))
-
-      do_gradient(self.data_controller)
-
-      # No more need for k-space Hamiltonian
-      del arrays['Hksp']
-
-      ### PARALLELIZATION
-      #gather dHksp on nawf*nawf and scatter on k points
-      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
-      arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
-      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
-    except:
-      self.report_exception('gradient_and_momenta')
-      if attr['abort_on_exception']:
-        self.comm.Abort()
-
-    self.report_module_time('Gradient')
+#    try:      
+#      for ik in range(snktot):
+#        for ispin in range(nspin):
+#          arrays['Hksp'][ik,:,:,ispin] = (np.conj(arrays['Hksp'][ik,:,:,ispin].T) + arrays['Hksp'][ik,:,:,ispin])/2.
+#
+#      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snktot, nawf**2, nspin))
+#      arrays['Hksp'] = np.moveaxis(gather_scatter(arrays['Hksp'],1,attr['npool']), 0, 1)
+#      snawf,_,nspin = arrays['Hksp'].shape
+#      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin))
+#
+#      do_gradient(self.data_controller)
+#
+#      # No more need for k-space Hamiltonian
+#      del arrays['Hksp']
+#
+#      ### PARALLELIZATION
+#      #gather dHksp on nawf*nawf and scatter on k points
+#      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
+#      arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
+#      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
+#    except:
+#      self.report_exception('gradient_and_momenta')
+#      if attr['abort_on_exception']:
+#        self.comm.Abort()
+#
+#    self.report_module_time('Gradient')
 
     ### DEV: Proposed to remove this and calculate pksp or velkp when required
     # Compute the momentum operator p_n,m(k) (and kinetic energy operator)
     
-    # reconstruct the wavefunctions in the full BZ
-    aux = np.zeros((nktot,nawf,nawf,nspin),dtype=complex)
-    for n in range(nktot):
-      aux[n,:,:,:] =  arrays['v_k'][arrays['inv'][n],:,:,:]
-    arrays['v_k'] = aux
+#    # reduce dHksp to the ir BZ
+#    snktot = arrays['irk'].shape[0]
+#    aux = np.zeros((snktot,3,nawf,nawf,nspin),dtype=complex)
+#    for n in range(snktot):
+#      aux[n,:,:,:,:] =  arrays['dHksp'][arrays['irk'][n],:,:,:,:]
+#    arrays['dHksp'] = aux
     
     do_momentum(self.data_controller)
     
-    # Reduce all quantities to the ir BZ
-    if self.rank == 0:
-      snktot = arrays['irk'].shape[0]
-      aux = np.zeros((snktot,nawf,nawf,nspin),dtype=complex)
-      for n in range(snktot):
-        aux[n,:,:,:] =  arrays['v_k'][arrays['irk'][n],:,:,:]
-      arrays['v_k'] = aux
-
-      aux = np.zeros((snktot,3,nawf,nawf,nspin),dtype=complex)
-      for n in range(snktot):
-        aux[n,:,:,:,:] =  arrays['pksp'][arrays['irk'][n],:,:,:,:]
-      arrays['pksp'] = aux
-      
-    arrays['v_k'] = scatter_full((arrays['v_k'] if self.rank==0 else None), attr['npool'])
-    arrays['pksp'] = scatter_full((arrays['pksp'] if self.rank==0 else None), attr['npool'])
-      
+#    arrays['pksp'] = scatter_full((arrays['pksp'] if self.rank==0 else None), attr['npool'])
     
     self.report_module_time('Momenta')
 

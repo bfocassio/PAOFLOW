@@ -45,7 +45,7 @@ def do_gradient ( data_controller ):
   nktot = attr['nkpnts']
   snawf,nk1,nk2,nk3,nspin = arry['Hksp'].shape
 
-  # fft grid in R shifted to have (0,0,0) in the center
+  # fft grid in R
   get_R_grid_fft(data_controller)
 
   arry['dHksp'] = np.empty((snawf,nk1,nk2,nk3,3,nspin), dtype=complex, order='C')
@@ -61,3 +61,4 @@ def do_gradient ( data_controller ):
       # Compute R*H(R)
       for l in range(3):
         arry['dHksp'][n,:,:,:,l,ispin] = FFT.fftn(arry['Rfft'][:,:,:,l]*arry['Hksp'][n,:,:,:,ispin])
+
