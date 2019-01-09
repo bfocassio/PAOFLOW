@@ -685,14 +685,13 @@ class PAOFLOW:
             arrays['Hksp'][ik,:,:,ispin] = (np.conj(arrays['Hksp'][ik,:,:,ispin].T) + arrays['Hksp'][ik,:,:,ispin])/2.
         arrays['Haux'] = arrays['Hksp']
         
-        arrays['Hksp'] = np.reshape(arrays['Hksp'], (snktot, nawf**2, nspin))
-        arrays['Hksp'] = np.moveaxis(gather_scatter(arrays['Hksp'],1,attr['npool']), 0, 1)
-        snawf,_,nspin = arrays['Hksp'].shape
-        arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin))
+        arrays['Haux'] = np.reshape(arrays['Haux'], (snktot, nawf**2, nspin))
+        arrays['Haux'] = np.moveaxis(gather_scatter(arrays['Haux'],1,attr['npool']), 0, 1)
+        snawf,_,nspin = arrays['Haux'].shape
+        arrays['Haux'] = np.reshape(arrays['Haux'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin))
 
         do_gradient(self.data_controller)
 
-        arrays['Hksp'] = arrays['Haux']
         del(arrays['Haux'])
         
 #        ### PARALLELIZATION
@@ -733,19 +732,13 @@ class PAOFLOW:
         aux = None
 
         arrays['irw'] = irw
-#        arrays['irk'] = irk
-#        arrays['inv'] = inv
-#        arrays['grid'] = grid
         arrays['kq_wght'] = irw/np.prod(mesh)
         
       
       arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
       arrays['dHksp'] = scatter_full((arrays['dHksp'] if self.rank==0 else None), attr['npool'])
       arrays['irw'] = scatter_full((arrays['irw'] if self.rank==0 else None), attr['npool'])
-#      arrays['irk'] = scatter_full((arrays['irk'] if self.rank==0 else None), attr['npool'])
-#      arrays['inv'] = scatter_full((arrays['inv'] if self.rank==0 else None), attr['npool'])
       arrays['kq_wght'] = scatter_full((arrays['kq_wght'] if self.rank==0 else None), attr['npool'])
-#      arrays['grid'] = scatter_full((arrays['grid'] if self.rank==0 else None), attr['npool'])
       
 #      get_K_grid_fft(self.data_controller)
 
@@ -790,6 +783,8 @@ class PAOFLOW:
 
     try:
       if 'Hksp' not in arrays:
+      # DEV: here we should just call the interpolated_hamiltonian method with nfftx = nkx!!!
+#        self.interpolated_hamiltonian() ?????
         if self.rank == 0:
           nktot = attr['nkpnts']
           nawf,_,nk1,nk2,nk3,nspin = arrays['Hks'].shape
@@ -832,6 +827,9 @@ class PAOFLOW:
 
       do_pao_eigh(self.data_controller)
 
+      # Hksp no more needed
+      del(arrays['Hksp'])
+      
       ### PARALLELIZATION
       ## DEV: Sample RunTime Here
       ## DEV: Parallelize search for amax & subtract for all processes.
