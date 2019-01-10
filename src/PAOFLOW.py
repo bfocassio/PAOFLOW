@@ -699,6 +699,7 @@ class PAOFLOW:
         arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
         arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
         arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
+        
       except:
         self.report_exception('gradient_and_momenta')
         if attr['abort_on_exception']:
@@ -707,9 +708,8 @@ class PAOFLOW:
       # Reduce Hksp and dHksp to k-points in the irreducible Brillouin Zone
       
       if self.rank == 0:         
-        numbers = [1,1]
+        numbers = arrays['numbers']
         cell = (arrays['a_vectors'],arrays['tau']/attr['alat'],numbers)
-        print('Space group',spg.get_spacegroup(cell, symprec=1e-5))
         
         mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
         mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
@@ -736,6 +736,7 @@ class PAOFLOW:
       arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
       arrays['dHksp'] = scatter_full((arrays['dHksp'] if self.rank==0 else None), attr['npool'])
       arrays['irw'] = scatter_full((arrays['irw'] if self.rank==0 else None), attr['npool'])
+      
       
 #      get_K_grid_fft(self.data_controller)
 
@@ -789,9 +790,8 @@ class PAOFLOW:
           
           # Reduce Hks to k-points in the irreducible Brillouin Zone
                           
-          numbers = [1,1]
+          numbers = arrays['numbers']
           cell = (arrays['a_vectors'],arrays['tau']/attr['alat'],numbers)
-          if self.rank == 0: print('Space group',spg.get_spacegroup(cell, symprec=1e-5))
           
           mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
           mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
@@ -816,10 +816,6 @@ class PAOFLOW:
           arrays['kq_wght'] = None
         arrays['Hksp'] = scatter_full(arrays['Hks'], attr['npool'])
         arrays['irw'] = scatter_full(arrays['irw'], attr['npool'])
-        arrays['kq_wght'] = scatter_full(arrays['kq_wght'], attr['npool'])
-        arrays['inv'] = scatter_full((arrays['inv'] if self.rank==0 else None), attr['npool'])
-        arrays['irk'] = scatter_full((arrays['irk'] if self.rank==0 else None), attr['npool'])
-        arrays['grid'] = scatter_full((arrays['grid'] if self.rank==0 else None), attr['npool'])
         del arrays['Hks']
 
       do_pao_eigh(self.data_controller)

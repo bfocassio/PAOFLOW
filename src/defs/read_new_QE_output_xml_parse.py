@@ -17,6 +17,7 @@
 #
 
 import numpy as np
+import spglib as spg
 import xml.etree.cElementTree as ET
 import sys
 import re
@@ -50,7 +51,6 @@ def read_new_QE_output_xml ( data_controller ):
 #                alatunits  = elem.findall("LATTICE_PARAMETER")[0].attrib['UNITS']
                 alatunits = "Bohr"
                 alat   = float(elem.findall("atomic_structure")[0].attrib['alat'])
-                if rank == 0 and verbose: print("The lattice parameter is: alat= {0:f} ({1:s})".format(alat,alatunits))
 
                 aux=elem.findall("atomic_structure/cell/a1")[0].text.split()
                 a1=np.array(aux,dtype="float32")
@@ -81,7 +81,6 @@ def read_new_QE_output_xml ( data_controller ):
                 k1=int(elem.findall(".//monkhorst_pack")[0].attrib['k1'])
                 k2=int(elem.findall(".//monkhorst_pack")[0].attrib['k2'])
                 k3=int(elem.findall(".//monkhorst_pack")[0].attrib['k3'])
-                if rank == 0 and verbose: print('Monkhorst&Pack grid',nk1,nk2,nk3,k1,k2,k3)
                
 	        # Get hightest occupied level or fermi energy
                 try:
@@ -101,11 +100,25 @@ def read_new_QE_output_xml ( data_controller ):
                 # Atomic Positions
                 natoms=int(float(elem.findall("atomic_structure")[0].attrib['nat']))
                 tau = np.zeros((natoms,3),dtype=float)
+                elements = []
                 for n in range(natoms):
                     aux = elem.findall("atomic_structure/atomic_positions/atom")[n].text.split()
+                    auxn = elem.findall("atomic_structure/atomic_positions/atom")[n].attrib['name']
                     tau[n,:]=np.array(aux,dtype="float32")
-			
-			
+                    elements.append(auxn)
+                elements = np.asarray(elements)
+                # Do preliminaries for symmetry
+                ele,index,numbers,count = np.unique(elements,return_index=True,return_counts=True,return_inverse=True)
+                a = []
+                for n in range(ele.shape[0]):
+                    a.append(ele[n])
+                    a.append(count[n])
+                a = np.asarray(a)
+                print('Crystal is ',np.array2string(a,separator='').replace("'","").replace("[","").replace("]",""))
+                cell = (a_vectors,tau/alat,numbers)
+                print('Space group: ',spg.get_spacegroup(cell, symprec=1e-5))
+                if rank == 0 and verbose: print("The lattice parameter is: alat= {0:f} ({1:s})".format(alat,alatunits))
+                if rank == 0 and verbose: print('Monkhorst&Pack grid',nk1,nk2,nk3,k1,k2,k3)
 			
     # Reading atomic_proj.xml
 
@@ -294,6 +307,7 @@ def read_new_QE_output_xml ( data_controller ):
     data_attributes['Efermi'] = Efermi
     data_attributes['dftSO'] = dftSO
     data_arrays['tau'] = tau
+    data_arrays['numbers'] = numbers
     data_arrays['kpnts'] = kpnts
     data_arrays['kpnts_wght'] = kpnts_wght
     data_arrays['a_vectors'] = a_vectors
