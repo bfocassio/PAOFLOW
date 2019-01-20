@@ -677,7 +677,9 @@ class PAOFLOW:
         nirk = len(np.unique(mapping))
         arrays['grid'] = grid/mesh
 #        irw = np.ones(snktot,dtype=int)
-        arrays['irw'] = irw   
+      arrays['irw'] = irw
+
+      arrays['grid'] = scatter_full((arrays['grid'] if self.rank==0 else None), attr['npool'])
 
       # Fourier interpolation on extended grid (zero padding)
       do_double_grid(self.data_controller)
@@ -712,9 +714,9 @@ class PAOFLOW:
         arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
         arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
         arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
-        
+
       except:
-        self.report_exception('gradient_and_momenta')
+        self.report_exception('gradient')
         if attr['abort_on_exception']:
           self.comm.Abort()
           
