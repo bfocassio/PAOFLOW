@@ -676,9 +676,8 @@ class PAOFLOW:
         _,irk,inv,irw = np.unique(mapping,return_index=True,return_inverse=True,return_counts=True)
         nirk = len(np.unique(mapping))
         arrays['grid'] = grid/mesh
-#        irw = np.ones(snktot,dtype=int)
-      arrays['irw'] = irw
 
+        print(arrays['grid'][:20],arrays['grid'][-20:])
       arrays['grid'] = scatter_full((arrays['grid'] if self.rank==0 else None), attr['npool'])
 
       # Fourier interpolation on extended grid (zero padding)
@@ -720,20 +719,34 @@ class PAOFLOW:
         if attr['abort_on_exception']:
           self.comm.Abort()
           
-      # Reduce Hksp and dHksp to k-points in the irreducible Brillouin Zone
+      # Symmetrize and reduce Hksp and dHksp to k-points in the irreducible Brillouin Zone
 
-      if self.rank == 0:               
+      if self.rank == 0:
+        testh = 1           
         aux = np.zeros((nirk,nawf,nawf,nspin),dtype=complex)
-        for n in range(nirk):
-          aux[n] = arrays['Hksp'][irk[n],:,:,:]
+        if testh == 0: 
+          aux = arrays['Hksp']
+          irw = np.ones(snktot,dtype=int)
+        else:
+          for n in range(nirk):
+            if testh == 1: aux[n,:,:,:] =  arrays['Hksp'][irk[n],:,:,:]
+            if testh == 2: aux[n] = np.sum(arrays['Hksp'][np.argwhere(mapping==mapping[irk[n]])[:,0],:,:,:],axis=0)/irw[n]
         arrays['Hksp'] = aux
         aux = None
-          
+
+        testd = 1
         aux = np.zeros((nirk,3,nawf,nawf,nspin),dtype=complex)
-        for n in range(nirk):
-          aux[n,:,:,:,:] =  arrays['dHksp'][irk[n],:,:,:,:]
+        if testd == 0: 
+          aux = arrays['dHksp']
+        else:
+          for n in range(nirk):
+            if testd == 1: aux[n,:,:,:,:] =  arrays['dHksp'][irk[n],:,:,:,:]
+            if testd == 2: aux[n] = np.sum(arrays['dHksp'][np.argwhere(mapping==mapping[irk[n]])[:,0],:,:,:,:],axis=0)/irw[n]
         arrays['dHksp'] = aux
-        aux = None    
+        aux = None  
+        
+        arrays['irw'] = irw  
+        print(arrays['irw'])
       
       arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
       arrays['dHksp'] = scatter_full((arrays['dHksp'] if self.rank==0 else None), attr['npool'])
