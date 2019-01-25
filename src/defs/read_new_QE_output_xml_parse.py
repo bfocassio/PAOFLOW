@@ -75,12 +75,20 @@ def read_new_QE_output_xml ( data_controller ):
 
 
                 # Monkhorst&Pack grid
-                nk1=int(elem.findall(".//monkhorst_pack")[0].attrib['nk1'])
-                nk2=int(elem.findall(".//monkhorst_pack")[0].attrib['nk2'])
-                nk3=int(elem.findall(".//monkhorst_pack")[0].attrib['nk3'])
-                k1=int(elem.findall(".//monkhorst_pack")[0].attrib['k1'])
-                k2=int(elem.findall(".//monkhorst_pack")[0].attrib['k2'])
-                k3=int(elem.findall(".//monkhorst_pack")[0].attrib['k3'])
+                try:
+                    nk1=int(elem.findall(".//monkhorst_pack")[0].attrib['nk1'])
+                    nk2=int(elem.findall(".//monkhorst_pack")[0].attrib['nk2'])
+                    nk3=int(elem.findall(".//monkhorst_pack")[0].attrib['nk3'])
+                    k1=int(elem.findall(".//monkhorst_pack")[0].attrib['k1'])
+                    k2=int(elem.findall(".//monkhorst_pack")[0].attrib['k2'])
+                    k3=int(elem.findall(".//monkhorst_pack")[0].attrib['k3'])
+                except:
+                    nk1 = 12
+                    nk2 = 12
+                    nk3 = 12
+                    k1 = 0
+                    k2 = 0
+                    k3 = 0
                
 	        # Get hightest occupied level or fermi energy
                 try:

@@ -62,6 +62,6 @@ def do_gradient ( data_controller ):
       # Compute R*H(R)
       for l in range(3):
         arry['dHksp'][n,:,:,:,l,ispin] = FFT.fftn(arry['Rfft'][:,:,:,l]*aux[n,:,:,:,ispin])
-  
+
   aux = None
 

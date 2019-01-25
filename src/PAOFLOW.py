@@ -605,8 +605,6 @@ class PAOFLOW:
     del arrays['Rfft']
     del arrays['R_wght']
 
-
-
   def interpolated_hamiltonian ( self, nfft1=None, nfft2=None, nfft3=None ):
     '''
     Calculate the interpolated Hamiltonian with the method of zero padding
@@ -624,6 +622,8 @@ class PAOFLOW:
     from .defs.do_double_grid import do_double_grid
     from .defs.do_gradient import do_gradient
     from .defs.communication import gather_scatter,scatter_full
+    from .defs.reducebysym import reducebysym
+    from .defs.init_sym import init_sym
 
     arrays,attr = self.data_controller.data_dicts()
 
@@ -667,18 +667,7 @@ class PAOFLOW:
       arrays['HRs'] = scatter_full((arrays['HRs'] if self.rank==0 else None), attr['npool'])
 
       # Preliminaries for symmetry reduction
-      
-      if self.rank == 0:         
-        numbers = arrays['numbers']
-        cell = (arrays['a_vectors'],arrays['tau']/attr['alat'],numbers)
-        mesh = [attr['nfft1'],attr['nfft2'],attr['nfft3']]
-        mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
-        _,irk,inv,irw = np.unique(mapping,return_index=True,return_inverse=True,return_counts=True)
-        nirk = len(np.unique(mapping))
-        arrays['grid'] = grid/mesh
-
-        print(arrays['grid'][:20],arrays['grid'][-20:])
-      arrays['grid'] = scatter_full((arrays['grid'] if self.rank==0 else None), attr['npool'])
+      init_sym(self.data_controller)         
 
       # Fourier interpolation on extended grid (zero padding)
       do_double_grid(self.data_controller)
@@ -690,7 +679,6 @@ class PAOFLOW:
       snktot = arrays['Hksp'].shape[1]
 
       arrays['Hksp'] = np.reshape(np.moveaxis(arrays['Hksp'],0,1), (snktot,nawf,nawf,nspin),order='C')
-      
       
 #     do gradient
       try:   
@@ -719,34 +707,10 @@ class PAOFLOW:
         if attr['abort_on_exception']:
           self.comm.Abort()
           
-      # Symmetrize and reduce Hksp and dHksp to k-points in the irreducible Brillouin Zone
-
-      if self.rank == 0:
-        testh = 1           
-        aux = np.zeros((nirk,nawf,nawf,nspin),dtype=complex)
-        if testh == 0: 
-          aux = arrays['Hksp']
-          irw = np.ones(snktot,dtype=int)
-        else:
-          for n in range(nirk):
-            if testh == 1: aux[n,:,:,:] =  arrays['Hksp'][irk[n],:,:,:]
-            if testh == 2: aux[n] = np.sum(arrays['Hksp'][np.argwhere(mapping==mapping[irk[n]])[:,0],:,:,:],axis=0)/irw[n]
-        arrays['Hksp'] = aux
-        aux = None
-
-        testd = 1
-        aux = np.zeros((nirk,3,nawf,nawf,nspin),dtype=complex)
-        if testd == 0: 
-          aux = arrays['dHksp']
-        else:
-          for n in range(nirk):
-            if testd == 1: aux[n,:,:,:,:] =  arrays['dHksp'][irk[n],:,:,:,:]
-            if testd == 2: aux[n] = np.sum(arrays['dHksp'][np.argwhere(mapping==mapping[irk[n]])[:,0],:,:,:,:],axis=0)/irw[n]
-        arrays['dHksp'] = aux
-        aux = None  
-        
-        arrays['irw'] = irw  
-        print(arrays['irw'])
+      # Reduce Hksp and dHksp to k-points in the irreducible Brillouin Zone
+      
+      arrays['Hksp'] = reducebysym(self.data_controller,arrays['Hksp'],1)
+      arrays['dHksp'] = reducebysym(self.data_controller,arrays['dHksp'],1)
       
       arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
       arrays['dHksp'] = scatter_full((arrays['dHksp'] if self.rank==0 else None), attr['npool'])
@@ -758,7 +722,7 @@ class PAOFLOW:
         if attr['verbose']:
           print('Performing Fourier interpolation on a larger grid.')
           print('d : nk -> nfft\n1 : %d -> %d\n2 : %d -> %d\n3 : %d -> %d'%(nko1,nfft1,nko2,nfft2,nko3,nfft3))
-          print("Number of ir-kpoints: %d" % nirk)
+          print("Number of ir-kpoints: %d" % arrays['irw'].shape[0])
         print('New estimated maximum array size: %.2f GBytes'%gbyte)
 
     except:

@@ -30,6 +30,7 @@ def get_R_grid_fft ( data_controller ):
   nrtot = nr1 * nr2 * nr3
 
   a_vectors = arrays['a_vectors']
+  b_vectors = arrays['b_vectors']
 
   arrays['R'] = np.zeros((nrtot,3), dtype=float)
   arrays['idx'] = np.zeros((nr1,nr2,nr3), dtype=int)
@@ -49,9 +50,11 @@ def get_R_grid_fft ( data_controller ):
 #        Rx -= int(Rx)
 #        Ry -= int(Ry)
 #        Rz -= int(Rz)
-        Rx = -arrays['grid'][n,0]
-        Ry = -arrays['grid'][n,1]
-        Rz = -arrays['grid'][n,2]
+        Rx = arrays['grid'][n,0]
+        Ry = arrays['grid'][n,1]
+        Rz = arrays['grid'][n,2]
         arrays['R'][n,:] = Rx*nr1*a_vectors[0,:] + Ry*nr2*a_vectors[1,:] + Rz*nr3*a_vectors[2,:]
         arrays['Rfft'][i,j,k,:] = arrays['R'][n,:]
         arrays['idx'][i,j,k] = n
+#        arrays['Rfft'] = FFT.ifftshift(arrays['Rfft'], axes=(0,1,2))
+
