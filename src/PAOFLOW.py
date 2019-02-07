@@ -815,7 +815,7 @@ class PAOFLOW:
     
     arrays['E_k'] = reducebysym(self.data_controller,arrays['E_k'])
     arrays['v_k'] = reducebysym(self.data_controller,arrays['v_k'])
-    arrays['pksps'] = reducebysym(self.data_controller,arrays['pksp'])
+    arrays['pksps'] = reducebysym2(self.data_controller,arrays['pksp'])
     arrays['pksp'] = reducebysym(self.data_controller,arrays['pksp'])
     
     arrays['E_k'] = scatter_full((arrays['E_k'] if self.rank==0 else None), attr['npool'])
