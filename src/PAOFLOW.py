@@ -815,7 +815,7 @@ class PAOFLOW:
     
     arrays['E_k'] = reducebysym(self.data_controller,arrays['E_k'])
     arrays['v_k'] = reducebysym(self.data_controller,arrays['v_k'])
-    arrays['pksps'] = reducebysym2(self.data_controller,arrays['pksp'])
+    arrays['pksps'] = reducebysym(self.data_controller,arrays['pksp'])
     arrays['pksp'] = reducebysym(self.data_controller,arrays['pksp'])
     
     arrays['E_k'] = scatter_full((arrays['E_k'] if self.rank==0 else None), attr['npool'])
@@ -836,6 +836,7 @@ class PAOFLOW:
     Returns:
         None
     '''
+    from .defs.communication import gather_scatter,scatter_full,gather_full
     from .defs.do_adaptive_smearing import do_adaptive_smearing
 
     arrays,attr = self.data_controller.data_dicts()
