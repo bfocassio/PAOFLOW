@@ -17,7 +17,6 @@
 #
 
 import numpy as np
-import spglib as spg
 
 class PAOFLOW:
 
@@ -605,6 +604,8 @@ class PAOFLOW:
     del arrays['Rfft']
     del arrays['R_wght']
 
+
+
   def interpolated_hamiltonian ( self, nfft1=None, nfft2=None, nfft3=None ):
     '''
     Calculate the interpolated Hamiltonian with the method of zero padding
@@ -620,10 +621,7 @@ class PAOFLOW:
     '''
     from .defs.get_K_grid_fft import get_K_grid_fft
     from .defs.do_double_grid import do_double_grid
-    from .defs.do_gradient import do_gradient
     from .defs.communication import gather_scatter,scatter_full
-    from .defs.reducebysym import reducebysym
-    from .defs.init_sym import init_sym
 
     arrays,attr = self.data_controller.data_dicts()
 
@@ -666,63 +664,24 @@ class PAOFLOW:
         arrays['HRs'] = np.reshape(arrays['HRs'], (attr['nawf']**2,nk1,nk2,nk3,attr['nspin']))
       arrays['HRs'] = scatter_full((arrays['HRs'] if self.rank==0 else None), attr['npool'])
 
-      # Preliminaries for symmetry reduction
-      init_sym(self.data_controller)         
-
       # Fourier interpolation on extended grid (zero padding)
       do_double_grid(self.data_controller)
 
       snawf,_,_,_,nspin = arrays['Hksp'].shape
-      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nkpnts'],nspin),order='C')
+      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nkpnts'],nspin))
       arrays['Hksp'] = gather_scatter(arrays['Hksp'], 1, attr['npool'])
       nawf = attr['nawf']
       snktot = arrays['Hksp'].shape[1]
+      arrays['Hksp'] = np.reshape(np.moveaxis(arrays['Hksp'],0,1), (snktot,nawf,nawf,nspin))
 
-      arrays['Hksp'] = np.reshape(np.moveaxis(arrays['Hksp'],0,1), (snktot,nawf,nawf,nspin),order='C')
-      
-#     do gradient
-      try:   
-        for ik in range(snktot):
-          for ispin in range(nspin):
-            arrays['Hksp'][ik,:,:,ispin] = (np.conj(arrays['Hksp'][ik,:,:,ispin].T) + arrays['Hksp'][ik,:,:,ispin])/2.
-        arrays['Haux'] = arrays['Hksp']
-        
-        arrays['Haux'] = np.reshape(arrays['Haux'], (snktot, nawf**2, nspin))
-        arrays['Haux'] = np.moveaxis(gather_scatter(arrays['Haux'],1,attr['npool']), 0, 1)
-        snawf,_,nspin = arrays['Haux'].shape
-        arrays['Haux'] = np.reshape(arrays['Haux'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin),order='C')
+      get_K_grid_fft(self.data_controller)
 
-        do_gradient(self.data_controller)
-
-        del(arrays['Haux'])
-        
-#        ### PARALLELIZATION
-#        #gather dHksp on nawf*nawf and scatter on k points
-        arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
-        arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
-        arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
-
-      except:
-        self.report_exception('gradient')
-        if attr['abort_on_exception']:
-          self.comm.Abort()
-          
-      # Reduce Hksp and dHksp to k-points in the irreducible Brillouin Zone
-      
-      arrays['Hksp'] = reducebysym(self.data_controller,arrays['Hksp'],1)
-      arrays['dHksp'] = reducebysym(self.data_controller,arrays['dHksp'],1)
-      
-      arrays['Hksp'] = scatter_full((arrays['Hksp'] if self.rank==0 else None), attr['npool'])
-      arrays['dHksp'] = scatter_full((arrays['dHksp'] if self.rank==0 else None), attr['npool'])
-      arrays['irw'] = scatter_full((arrays['irw'] if self.rank==0 else None), attr['npool'])
-      
       # Report new memory requirements
       if self.rank == 0:
         gbyte = self.memory_check()
         if attr['verbose']:
           print('Performing Fourier interpolation on a larger grid.')
           print('d : nk -> nfft\n1 : %d -> %d\n2 : %d -> %d\n3 : %d -> %d'%(nko1,nfft1,nko2,nfft2,nko3,nfft3))
-          print("Number of ir-kpoints: %d" % arrays['irw'].shape[0])
         print('New estimated maximum array size: %.2f GBytes'%gbyte)
 
     except:
@@ -731,7 +690,6 @@ class PAOFLOW:
         self.comm.Abort()
 
     self.report_module_time('R -> k with Zero Padding')
-
 
 
 
@@ -758,48 +716,17 @@ class PAOFLOW:
 
     try:
       if 'Hksp' not in arrays:
-      # DEV: here we should just call the interpolated_hamiltonian method with nfftx = nkx!!!
-#        self.interpolated_hamiltonian() ?????
         if self.rank == 0:
           nktot = attr['nkpnts']
           nawf,_,nk1,nk2,nk3,nspin = arrays['Hks'].shape
-          arrays['Hks'] = np.reshape(np.moveaxis(arrays['Hks'], [0,1], [3,4]),(nktot,nawf,nawf,nspin))
-          
-          # Reduce Hks to k-points in the irreducible Brillouin Zone
-                          
-          numbers = arrays['numbers']
-          cell = (arrays['a_vectors'],arrays['tau']/attr['alat'],numbers)
-          
-          mesh = [attr['nk1'],attr['nk2'],attr['nk3']]
-          mapping, grid = spg.get_ir_reciprocal_mesh(mesh, cell, is_shift=[0, 0, 0])
-          grid=grid/mesh
-          _,irk,inv,irw = np.unique(mapping,return_index=True,return_inverse=True,return_counts=True)
-                    
-          nirk = len(np.unique(mapping))
-          if self.rank == 0: print("Number of ir-kpoints: %d" % nirk)
-          aux = np.zeros((nirk,nawf,nawf,nspin),dtype=complex)
-          for n in range(nirk):
-            aux[n,:,:,:] = arrays['Hks'][irk[n],:,:,:]
-          arrays['Hks'] = aux
-          arrays['grid'] = grid
-          arrays['irw'] = irw
-          arrays['irk'] = irk
-          arrays['inv'] = inv
-          arrays['kq_wght'] = irw/np.prod(mesh)
-          aux = None
+          arrays['Hks'] = np.moveaxis(np.reshape(arrays['Hks'],(nawf,nawf,nktot,nspin),order='C'), 2, 0)
         else:
           arrays['Hks'] = None
-          arrays['irw'] = None
-          arrays['kq_wght'] = None
         arrays['Hksp'] = scatter_full(arrays['Hks'], attr['npool'])
-        arrays['irw'] = scatter_full(arrays['irw'], attr['npool'])
         del arrays['Hks']
 
       do_pao_eigh(self.data_controller)
 
-      # Hksp no more needed
-      del(arrays['Hksp'])
-      
       ### PARALLELIZATION
       ## DEV: Sample RunTime Here
       ## DEV: Parallelize search for amax & subtract for all processes.
@@ -820,11 +747,11 @@ class PAOFLOW:
 
 
 
-  def momenta ( self ):
+  def gradient_and_momenta ( self ):
     '''
-    Calculate the momentum operator matrix elements
-    Requires 'dHksp'
-    Yields 'pksp'
+    Calculate the Gradient of the k-space Hamiltonian, 'Hksp'
+    Requires 'Hksp'
+    Yields 'dHksp'
 
     Arguments:
         None
@@ -832,16 +759,70 @@ class PAOFLOW:
     Returns:
         None
     '''
+    from .defs.do_gradient import do_gradient
     from .defs.do_momentum import do_momentum
+    from .defs.communication import gather_scatter
 
     arrays,attr = self.data_controller.data_dicts()
 
+    try:
+      snktot,nawf,_,nspin = arrays['Hksp'].shape
+
+      for ik in range(snktot):
+        for ispin in range(nspin):
+          arrays['Hksp'][ik,:,:,ispin] = (np.conj(arrays['Hksp'][ik,:,:,ispin].T) + arrays['Hksp'][ik,:,:,ispin])/2.
+
+      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snktot, nawf**2, nspin))
+      arrays['Hksp'] = np.moveaxis(gather_scatter(arrays['Hksp'],1,attr['npool']), 0, 1)
+      snawf,_,nspin = arrays['Hksp'].shape
+      arrays['Hksp'] = np.reshape(arrays['Hksp'], (snawf,attr['nk1'],attr['nk2'],attr['nk3'],nspin))
+
+      do_gradient(self.data_controller)
+
+      # No more need for k-space Hamiltonian
+      del arrays['Hksp']
+
+      ### PARALLELIZATION
+      #gather dHksp on nawf*nawf and scatter on k points
+      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snawf,attr['nkpnts'],3,nspin))
+      arrays['dHksp'] = np.moveaxis(gather_scatter(arrays['dHksp'],1,attr['npool']), 0, 2)
+      arrays['dHksp'] = np.reshape(arrays['dHksp'], (snktot,3,nawf,nawf,nspin), order="C")
+    except:
+      self.report_exception('gradient_and_momenta')
+      if attr['abort_on_exception']:
+        self.comm.Abort()
+
+    self.report_module_time('Gradient')
+
+    ### DEV: Proposed to remove this and calculate pksp or velkp when required
+    # Compute the momentum operator p_n,m(k) (and kinetic energy operator)
     do_momentum(self.data_controller)
-    
-    del(arrays['dHksp'])
-    
     self.report_module_time('Momenta')
 
+  def symmetry(self):
+    
+    from .defs.communication import gather_scatter,scatter_full,gather_full
+    from .defs.reducebysym import reducebysym,reducebysym2
+    from .defs.init_sym import init_sym
+    
+    arrays,attr = self.data_controller.data_dicts()
+    
+    # Preliminaries for symmetry reduction
+    init_sym(self.data_controller)
+    print("Number of ir-kpoints: %d" % arrays['irw'].shape[0])
+    
+    # Reduce Hksp and pksp to k-points in the irreducible Brillouin Zone
+    
+    arrays['E_k'] = reducebysym(self.data_controller,arrays['E_k'])
+    arrays['v_k'] = reducebysym(self.data_controller,arrays['v_k'])
+    arrays['pksps'] = reducebysym2(self.data_controller,arrays['pksp'])
+    arrays['pksp'] = reducebysym(self.data_controller,arrays['pksp'])
+    
+    arrays['E_k'] = scatter_full((arrays['E_k'] if self.rank==0 else None), attr['npool'])
+    arrays['v_k'] = scatter_full((arrays['v_k'] if self.rank==0 else None), attr['npool'])
+    arrays['pksp'] = scatter_full((arrays['pksp'] if self.rank==0 else None), attr['npool'])
+    arrays['pksps'] = scatter_full((arrays['pksps'] if self.rank==0 else None), attr['npool'])
+    arrays['irw'] = scatter_full((arrays['irw'] if self.rank==0 else None), attr['npool'])
 
 
   def adaptive_smearing ( self, smearing='gauss' ):
@@ -857,7 +838,7 @@ class PAOFLOW:
     '''
     from .defs.do_adaptive_smearing import do_adaptive_smearing
 
-    attr = self.data_controller.data_attributes
+    arrays,attr = self.data_controller.data_dicts()
 
     if 'smearing' not in attr or attr['smearing'] is None:
       attr['smearing'] = smearing
@@ -873,6 +854,9 @@ class PAOFLOW:
       if attr['abort_on_exception']:
         self.comm.Abort()
     self.report_module_time('Adaptive Smearing')
+    
+    arrays['pksp'] = arrays['pksps']
+    arrays['pksp'] = scatter_full((arrays['pksp'] if self.rank==0 else None), attr['npool'])
 
 
 

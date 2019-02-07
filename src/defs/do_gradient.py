@@ -43,25 +43,21 @@ def do_gradient ( data_controller ):
   #----------------------
 
   nktot = attr['nkpnts']
-  snawf,nk1,nk2,nk3,nspin = arry['Haux'].shape
+  snawf,nk1,nk2,nk3,nspin = arry['Hksp'].shape
 
-  # fft grid in R
+  # fft grid in R shifted to have (0,0,0) in the center
   get_R_grid_fft(data_controller)
 
   arry['dHksp'] = np.empty((snawf,nk1,nk2,nk3,3,nspin), dtype=complex, order='C')
-  aux = arry['Haux']
   for ispin in range(nspin):
     for n in range(snawf):
       ########################################
       ### real space grid replaces k space ###
       ########################################
       if attr['use_cuda']:
-        aux[n,:,:,:,ispin] = cuda_ifftn(aux[n,:,:,:,ispin])*1.0j*attr['alat']
+        arry['Hksp'][n,:,:,:,ispin] = cuda_ifftn(arry['Hksp'][n,:,:,:,ispin])*1.0j*attr['alat']
       else:
-        aux[n,:,:,:,ispin] = FFT.ifftn(aux[n,:,:,:,ispin])*1.0j*attr['alat']
+        arry['Hksp'][n,:,:,:,ispin] = FFT.ifftn(arry['Hksp'][n,:,:,:,ispin])*1.0j*attr['alat']
       # Compute R*H(R)
       for l in range(3):
-        arry['dHksp'][n,:,:,:,l,ispin] = FFT.fftn(arry['Rfft'][:,:,:,l]*aux[n,:,:,:,ispin])
-
-  aux = None
-
+        arry['dHksp'][n,:,:,:,l,ispin] = FFT.fftn(arry['Rfft'][:,:,:,l]*arry['Hksp'][n,:,:,:,ispin])

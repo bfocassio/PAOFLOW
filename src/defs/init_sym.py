@@ -33,3 +33,4 @@ def init_sym(data_controller):
 	arrays['grid'] = grid/mesh
 	arrays['irw'] = irw 
 	arrays['irk'] = irk 
+	arrays['mapping'] = mapping 

@@ -20,7 +20,7 @@ import numpy as np
 
 # Reduce array to the irreducible k-points in the BZ
 
-def reducebysym(data_controller,arry,mode=0):
+def reducebysym(data_controller,arry):
 	
 	arrays,attr = data_controller.data_dicts()
 
@@ -29,11 +29,25 @@ def reducebysym(data_controller,arry,mode=0):
 	newshape = tuple(tmp)
 		
 	aux = np.zeros(newshape,dtype=arry.dtype)
-	if mode == 0: 
-		aux = arry
-		arrays['irw'] = np.ones(arry.shape[0],dtype=int)
-	else:
-		for n in range(arrays['irw'].shape[0]):
-			aux[n] =  arry[arrays['irk'][n]]
+	for n in range(arrays['irw'].shape[0]):
+		aux[n] =  arry[arrays['irk'][n]]
 
+	return(aux)
+	
+def reducebysym2(data_controller,arry):
+	
+	arrays,attr = data_controller.data_dicts()
+
+	tmp = list(arry.shape)
+	tmp[0] = arrays['irw'].shape[0]
+	newshape = tuple(tmp)
+		
+	aux = np.zeros(newshape,dtype=arry.dtype)
+	for n in range(arrays['irw'].shape[0]):
+		nir = np.argwhere(arrays['mapping']==arrays['irk'][n])[:,0].shape[0]
+		idx = np.argwhere(arrays['mapping']==arrays['irk'][n])[:,0]
+		
+		for i in range(nir):
+			aux[n] +=  arry[idx[i]]/nir
+			
 	return(aux)
