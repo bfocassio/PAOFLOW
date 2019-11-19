@@ -220,11 +220,11 @@ def loop_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
 
     #plt.switch_backend('agg')
     model = tbmodels.Model.from_wannier_files(hr_file='z2pack_hamiltonian.dat')
-    system = z2pack.tb.System(model,bands=32)
+    system = z2pack.tb.System(model,bands=ef_index)
 
-    def gap(k):
-        eig = model.eigenval(k)
-        return eig[32] - eig[21]
+   # def gap(k):
+   #     eig = model.eigenval(k)
+   #     return eig[32] - eig[21]
 
 
     candidates=0

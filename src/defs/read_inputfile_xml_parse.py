@@ -65,7 +65,7 @@ def read_inputfile_xml ( fpath, inputfile ):
 
     # Control
     fpath = None
-    restart = verbose = non_ortho = write2file = write_binary = writedata = use_cuda = writez2pack = False
+    restart = verbose = non_ortho = write2file = write_binary = writedata = use_cuda = writez2pack = Weyl_search = False
     shift_type = 1
     shift = 'auto'
     pthr = 0.95
@@ -221,7 +221,7 @@ def read_inputfile_xml ( fpath, inputfile ):
     ac_cond_Berry = read_attribute(aroot, ac_cond_Berry, 'ac_cond_Berry', 'logical')
     spin_Hall = read_attribute(aroot, spin_Hall, 'spin_Hall', 'logical')
     ac_cond_spin = read_attribute(aroot, ac_cond_spin, 'ac_cond_spin', 'logical')
-
+    Weyl_search = read_attribute(aroot, Weyl_search, 'Weyl_search', 'logical')
 
     # Read Integer Input Values
     shift_type = read_attribute(aroot, shift_type, 'shift_type', 'integer')
@@ -272,7 +272,7 @@ def read_inputfile_xml ( fpath, inputfile ):
 
 
 
-    return fpath,restart,verbose,non_ortho,write2file,write_binary,writedata,writez2pack,use_cuda,shift_type, \
+    return fpath,restart,verbose,non_ortho,write2file,write_binary,writedata,writez2pack,Weyl_search,use_cuda,shift_type, \
         shift,pthr,npool,do_comparison,naw,sh,nl,Efield,Bfield,HubbardU,bval,onedim,do_bands, \
         ibrav,dkres,nk,band_topology,spol,ipol,jpol,do_spin_orbit,theta,phi,lambda_p,lambda_d, \
         double_grid,nfft1,nfft2,nfft3,do_dos,do_pdos,emin,emax,delta,smearing,fermisurf, \
