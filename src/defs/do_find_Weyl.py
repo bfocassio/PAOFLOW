@@ -27,8 +27,8 @@
 
 
 
-#import z2pack
-#import tbmodels
+import z2pack
+import tbmodels
 import scipy.optimize as so
 #import matplotlib.pyplot as plt
 from scipy import fftpack as FFT
@@ -207,50 +207,59 @@ def loop_min(ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vec
     CANDIDATES = {}
 #    CANDIDATES = {'[-0.007865 -0.33889  -0.033505]': [6.6127342213118112e-08], '[0.180072 0.179205 0.005416]': [1.523763586017135e-06], '[-0.507005 -0.508404 0.094956]': [7.777151428328688e-06], '[-0.491938 -0.016849 0.094221]': [3.189758233310136e-06], '[0.345998 -0.338489 0.033075]': [2.2020509471282201e-06], '[-0.008887 0.348185 0.034663]': [5.9531129448231468e-07], '[ 0.492577  0.492016 -0.094952]': [4.4537277532619157e-08], '[-0.492995 0.508404 -0.094956]': [7.5562735711992568e-06], '[-0.492577 0.507984 0.094952]': [4.4379632659213852e-06], '[-0.006277 0.34548 -0.033989]': [4.1678444084869426e-06], '[-0.34551 0.006347 -0.034031]': [2.9474345103197575e-06], '[ 0.005803  0.339145 -0.033455]': [2.3650376379524829e-08], '[ 0.491938  0.016849 -0.094221]': [7.9981158307429467e-08], '[ 0.348214 -0.008945 -0.034718]': [6.2017560392702009e-08], '[-0.348214 0.008945 0.034718]': [6.6011608114424636e-07], '[-0.345998  0.338489 -0.033075]': [6.5991954220634419e-08], '[ 0.344701 -0.338921 -0.033313]': [3.5319852778603611e-08], '[0.175098 -0.358254 0.005226]': [6.2559472217837975e-07], '[-0.016879 -0.485697 0.094325]': [4.8522886401530796e-06], '[0.007865 0.33889 0.033505]': [5.9198951841976655e-07], '[ 0.492577 -0.507984 -0.094952]': [4.8026373530851707e-08], '[0.507423 -0.492016 0.094952]': [4.3749342975296646e-06], '[0.507005 -0.491596 -0.094956]': [7.4392469254919158e-06], '[ 0.179294  0.179983 -0.005416]': [6.7186063379409688e-08], '[-0.507423  0.492016 -0.094952]': [6.0839751347963045e-08], '[-0.33888 -0.007829 0.033472]': [1.7667997588843853e-06], '[ 0.008887 -0.348185 -0.034663]': [1.3431241871475486e-07], '[-0.486367 -0.01688 -0.094333]': [3.4468396935549706e-06], '[0.175719 -0.358357 -0.005243]': [2.9719146784207284e-06], '[-0.35836 0.175699 0.005238]': [1.6496662409853924e-06], '[ 0.508062 -0.016849  0.094221]': [6.0724664449618437e-08], '[-0.338955 0.344642 0.033263]': [1.2423807027872602e-06], '[-0.005803 -0.339145 0.033455]': [1.1170258334275429e-06], '[-0.492577 -0.492016 0.094952]': [4.3190014239746777e-06], '[-0.016844 -0.491229 -0.094208]': [1.8106358440350689e-08], '[-0.175719  0.358357  0.005243]': [4.3814737823999472e-08], '[ 0.33888   0.007829 -0.033472]': [2.3856515554698809e-08], '[0.339136 0.005772 0.033433]': [1.7278282039429049e-06], '[-0.492995 -0.491596 -0.094956]': [6.6824492619965703e-08], '[ 0.507005  0.508404 -0.094956]': [6.5442281552141601e-08], '[ 0.35836  -0.175699 -0.005238]': [9.2643591187435703e-08], '[-0.507423 -0.507984 -0.094952]': [5.2774585021508891e-08], '[-0.344701 0.338921 0.033313]': [2.0506655751539871e-06], '[0.016844 -0.508771 0.094208]': [3.7555935471222934e-06], '[0.492995 0.491596 0.094956]': [7.4254546359453499e-06], '[-0.338517  0.345936 -0.033014]': [2.7901524340956385e-08], '[-0.180072 -0.179205 -0.005416]': [2.1801865979220736e-08], '[ 0.34551  -0.006347  0.034031]': [1.3187673206238593e-07], '[ 0.338955 -0.344642 -0.033263]': [1.1229381335908784e-07], '[0.338517 -0.345936 0.033014]': [3.5142918997366213e-06], '[ 0.016879  0.485697 -0.094325]': [7.996020182088337e-08], '[ 0.492995 -0.508404  0.094956]': [6.6139643997709108e-08], '[-0.339136 -0.005772 -0.033433]': [6.3970294089665813e-08], '[-0.358257  0.175078 -0.005221]': [4.2230067359705359e-08], '[0.358257 -0.175078 0.005221]': [3.7260399735061789e-06], '[ 0.486367  0.01688   0.094333]': [7.1513668944978015e-08], '[-0.016844  0.508771 -0.094208]': [6.320062662101833e-08], '[-0.507005  0.491596  0.094956]': [8.2623585695440482e-08], '[ 0.006277 -0.34548   0.033989]': [4.7847954903756929e-08], '[0.507423 0.507984 0.094952]': [4.5077906621060482e-06], '[-0.508062 0.016849 -0.094221]': [3.3789778068060716e-06], '[-0.175098  0.358254 -0.005226]': [6.169616947881984e-08], '[0.016844 0.491229 0.094208]': [3.7571603356822969e-06], '[-0.179294 -0.179983 0.005416]': [3.1078843576864967e-06]}
     candidates = 0
-    print ("Start Finding Weyl Points")
+##    print ("Start Finding Weyl Points")
     for initial in ini:
-        print ('starting initial at {}'.format(initial))
+##        print ('starting initial at {}'.format(initial))
         CANDIDATES,candidates,Rfft=find_min(initial,CANDIDATES,candidates,ef_index,HRaux,SRaux,read_S,alat,velkp1,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,snk1_range=[-0.5,0.5],snk2_range=[-0.5,0.5],snk3_range=[-0.5,0.5],npool=1,shift=0.0,nl=None,sh=None)
     band =bnd
    # for ispin in range(nspin):
    #     CANDIDATES,candidates=sym_test(CANDIDATES,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin)    
-    print (CANDIDATES) 
-#    WEYL = {}
+##    print (CANDIDATES) 
+    WEYL = {}
 
 
     #plt.switch_backend('agg')
-#    model = tbmodels.Model.from_wannier_files(hr_file='z2pack_hamiltonian.dat')
-#    system = z2pack.tb.System(model,bands=30)
+    model = tbmodels.Model.from_wannier_files(hr_file='z2pack_hamiltonian.dat')
+    system = z2pack.tb.System(model,bands=32)
 
- #   def gap(k):
- #       eig = model.eigenval(k)
- #       return eig[30] - eig[29]
+    def gap(k):
+        eig = model.eigenval(k)
+        return eig[32] - eig[21]
 
 
-  #  candidates=0
-  #  cart=[]
-  #  for i in CANDIDATES.keys():
-  #      cart.append(np.dot(list(map(float, i[1:-1].split( ))),b_vectors))
-  #  for p in cart:
-  #      for x in [-1,1]:
-  #          for y in [-1,1]:
-  #              for z in [-1,1]:
-  #                  kq = np.dot([p[0]*x,p[1]*y,p[2]*z],np.linalg.inv(b_vectors))
-  #                  result_1 = z2pack.surface.run(system=system,surface=z2pack.shape.Sphere(center=tuple(kq), radius=0.005))
-  #                  invariant = z2pack.invariant.chern(result_1)
-  #                  print (tuple(kq))
-  #                  print ('Chirality at {};{}'.format(kq,invariant))
-  #                  if invariant != 0:
-  #                      new = True
-  #                      for t in WEYL.keys():
-  #                          if np.linalg.norm(np.asarray(kq)-list(map(float, t[1:-1].split( ))))<0.005:
-  #                              new=False
-  #                      if new:
-  #                          candidates += 1
-  #                          WEYL[str(kq).replace(",", "")]=invariant
-  #                          print ('found Weyl point No. {} at {}'.format(candidates,kq))
-  #  print (WEYL)  
+    candidates=0
+    cart=[]
+    for i in CANDIDATES.keys():
+        cart.append(np.dot(list(map(float, i[1:-1].split( ))),b_vectors))
+    for p in cart:
+        for x in [-1,1]:
+            for y in [-1,1]:
+                for z in [-1,1]:
+                    kq = np.dot([p[0]*x,p[1]*y,p[2]*z],np.linalg.inv(b_vectors))
+                    result_1 = z2pack.surface.run(system=system,surface=z2pack.shape.Sphere(center=tuple(kq), radius=0.005))
+                    invariant = z2pack.invariant.chern(result_1)
+##                    print (tuple(kq))
+##                    print ('Chirality at {};{}'.format(kq,invariant))
+                    if invariant != 0:
+                        new = True
+                        for t in WEYL.keys():
+                            if np.linalg.norm(np.asarray(kq)-list(map(float, t[1:-1].split( ))))<0.005:
+                                new=False
+                        if new:
+                            candidates += 1
+                            WEYL[str(kq).replace(",", "")]=invariant
+##                            print ('found Weyl point No. {} at cartesian: {},  crystal: {} '.format(candidates,kq))
+##    print (WEYL)
+    if bool(WEYL):
+        j = 1
+        for k in WEYL.keys():
+            print ('Found Candidate No. {} at {} with Chirality:{}'.format(j,k,WEYL[k]))
+            j = j + 1
 
+    else:
+        print("No Candidate found.")
+##    print (WEYL)  
+##    print (cart)
 
 
 def sym_test(Candidates,NewCandidates,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin):
@@ -377,7 +386,7 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
     comm.Bcast(HRaux)
     comm.Barrier()
 
-    weyl=True
+####   weyl=True
 
 
     NewCandidates = {}
@@ -424,7 +433,8 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
      #   gap = find_egap(HRaux,K,Rfft,band,b_vectors,ef_index,ispin)
      #   print ('gap at [-0.491938, -0.016849, -0.094221] : {} eV'.format(gap))
      #   exit()
-        if weyl:
+####        if Weyl:
+        if True:
             lam_XiP  = lambda K: find_egap(HRaux,K,Rfft,band,b_vectors,ef_index,ispin)
 #loop over the search grid 
 ##        try:            
@@ -463,7 +473,7 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
                     Candidates[str(solx[0])] = [solx[1]]
                     NewCandidates[str(solx[0])] = [solx[1]]
                     candidates += 1
-                    print ('Candidate No.{} found at {} with gap:{} eV'.format(candidates,solx[0],solx[1]))
+  ##                  print ('Candidate No.{} found at {} with gap:{} eV'.format(candidates,solx[0],solx[1]))
                 else:
                     real = True
                     for i in Candidates.keys():
@@ -471,11 +481,11 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
                             real = False
                     if real:
                         candidates += 1
-                        print ('Candidate No.{} found at {} with gap:{} eV'.format(candidates,solx[0],solx[1]))
+   ##                     print ('Candidate No.{} found at {} with gap:{} eV'.format(candidates,solx[0],solx[1]))
                         Candidates[str(solx[0])] = [solx[1]]
                         NewCandidates[str(solx[0])] = [solx[1]]
-                    else:
-                        print ('Duplicate found at {} with gap:{} eV'.format(solx[0],solx[1]))
+   ##                 else:
+   ##                     print ('Duplicate found at {} with gap:{} eV'.format(solx[0],solx[1]))
                      
 
 #                solx = OP.least_squares(lam_XiP,solx.x,bounds=bounds_K[i],jac='3-point',max_nfev=30000)
@@ -503,8 +513,8 @@ def find_min(initial,Candidates,candidates,ef_index,HRaux,SRaux,read_S,alat,velk
 
 #    Candidates,candidates=sym_test(NewCandidates,candidates,HRaux,Rfft,band,b_vectors,ef_index,ispin)  
     return (Candidates,candidates,Rfft)
-    if weyl:
-        raise SystemExit
+####    if weyl:
+####        raise SystemExit
 
     comm.Barrier() 
     tempt = np.asarray([timer_avg],dtype=float)

@@ -131,7 +131,7 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
         #----------------------
         # Read input
         #----------------------
-        fpath,restart,verbose,non_ortho,write2file,write_binary,writedata,writez2pack,use_cuda,shift_type, \
+        fpath,restart,verbose,non_ortho,write2file,write_binary,writedata,writez2pack,Weyl_search,use_cuda,shift_type, \
         shift,pthr,npool,do_comparison,naw,sh,nl,Efield,Bfield,HubbardU,bval,onedim,do_bands, \
         ibrav,dkres,nk,band_topology,spol,ipol,jpol,do_spin_orbit,theta,phi,lambda_p,lambda_d, \
         double_grid,nfft1,nfft2,nfft3,do_dos,do_pdos,emin,emax,delta,smearing,fermisurf, \
@@ -1015,14 +1015,14 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
 
             if rank!=0:
                 HRs=None
-            if True:
-#            if do_bandwarping_calc.load_crit==False:
+            if Weyl_search == True:
+##            if do_bandwarping_calc.load_crit==False:
                 crit = loop_min(nelec,HRs,None,False,alat,velkp,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,npool=npool,shift=shift,nl=nl,sh=sh)
 ##                crit = do_find_extrema.find_min(HRs,None,False,alat,velkp,nk1,nk2,nk3,bnd,nspin,a_vectors,b_vectors,v_k,npool=npool,shift=shift,nl=nl,sh=sh,nelec=nelec)
-            else:
-                crit=np.array([[0.0,0.0,0.0,0.0,0.0,0.0],
-                               [0.0,0.0,0.0,1.0,0.0,0.0],])
-
+##            else:
+##                crit=np.array([[0.0,0.0,0.0,0.0,0.0,0.0],
+##                               [0.0,0.0,0.0,1.0,0.0,0.0],])
+          
             eig = E_k = None
 
 
@@ -1059,10 +1059,11 @@ def paoflow(inputpath='./',inputfile='inputfile.xml'):
 
 
 
-            if rank == 0:
-                print('momenta in                       %5s sec ' %str('%.3f' %(time.time()-reset)).rjust(10))
+            if rank == 0 and Weyl_search:
+    ##            print('momenta in                       %5s sec ' %str('%.3f' %(time.time()-reset)).rjust(10))
+                print('Weyl search in                       %5s sec ' %str('%.3f' %(time.time()-reset)).rjust(10))
                 reset=time.time()
-    
+                sys.exit() 
         #----------------------
         # Read/Write restart data
         #----------------------
